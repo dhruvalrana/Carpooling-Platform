@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Vehicle — CommuteSync{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-4">
+  <div class="col-md-8 col-lg-6">
+    <div class="card card-premium shadow-sm border-0">
+      <div class="card-header bg-white border-bottom py-3 px-4">
+        <h4 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-car-side me-2"></i>Register New Vehicle</h4>
+      </div>
+      <div class="card-body p-4">
+        <form method="post" action="{% url 'add_vehicle' %}">
+          {% csrf_token %}
+          
+          {% if form.errors %}
+            <div class="alert alert-danger rounded-4 border-0 mb-4" role="alert">
+              <i class="fa-solid fa-circle-exclamation me-2"></i> Correct the errors below.
+            </div>
+          {% endif %}
+          
+          <div class="row mb-3">
+            <div class="col-sm-6">
+              <label for="id_make" class="form-label fw-semibold text-secondary small">Make</label>
+              {{ form.make }}
+              {% if form.make.errors %}
+                <div class="text-danger small mt-1">{% for error in form.make.errors %}{{ error }}{% endfor %}</div>
+              {% endif %}
+            </div>
+            <div class="col-sm-6">
+              <label for="id_model" class="form-label fw-semibold text-secondary small">Model</label>
+              {{ form.model }}
+              {% if form.model.errors %}
+                <div class="text-danger small mt-1">{% for error in form.model.errors %}{{ error }}{% endfor %}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="id_license_plate" class="form-label fw-semibold text-secondary small">License Plate Number</label>
+            {{ form.license_plate }}
+            {% if form.license_plate.errors %}
+              <div class="text-danger small mt-1">{% for error in form.license_plate.errors %}{{ error }}{% endfor %}</div>
+            {% endif %}
+          </div>
+
+          <div class="row mb-4">
+            <div class="col-sm-4">
+              <label for="id_vehicle_type" class="form-label fw-semibold text-secondary small">Vehicle Type</label>
+              {{ form.vehicle_type }}
+              {% if form.vehicle_type.errors %}
+                <div class="text-danger small mt-1">{% for error in form.vehicle_type.errors %}{{ error }}{% endfor %}</div>
+              {% endif %}
+            </div>
+            <div class="col-sm-4">
+              <label for="id_capacity" class="form-label fw-semibold text-secondary small">Available Capacity (Seats)</label>
+              {{ form.capacity }}
+              {% if form.capacity.errors %}
+                <div class="text-danger small mt-1">{% for error in form.capacity.errors %}{{ error }}{% endfor %}</div>
+              {% endif %}
+            </div>
+            <div class="col-sm-4">
+              <label for="id_color" class="form-label fw-semibold text-secondary small">Vehicle Color</label>
+              {{ form.color }}
+              {% if form.color.errors %}
+                <div class="text-danger small mt-1">{% for error in form.color.errors %}{{ error }}{% endfor %}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="d-flex gap-3 mt-4">
+            <a href="{% url 'vehicles' %}" class="btn btn-outline-primary-custom w-50 py-3 rounded-4">
+              Cancel
+            </a>
+            <button type="submit" class="btn btn-primary-custom w-50 py-3 rounded-4">
+              <i class="fa-solid fa-floppy-disk me-2"></i> Save Vehicle
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

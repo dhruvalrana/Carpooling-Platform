@@ -1,0 +1,62 @@
+<div id="chat-wrapper" class="chat-panel d-flex flex-column h-100 shadow-sm">
+  <!-- Chat Header -->
+  <div class="bg-teal-light p-3 border-bottom d-flex align-items-center justify-content-between">
+    <div class="d-flex align-items-center gap-2">
+      <div class="bg-white rounded-circle d-flex align-items-center justify-content-center fw-bold text-primary" style="width: 32px; height: 32px; font-size: 0.8rem;">
+        C
+      </div>
+      <div>
+        <h6 class="fw-bold mb-0 text-dark" style="font-size: 0.9rem;">Trip Chat Room</h6>
+        <small class="text-secondary" style="font-size: 0.75rem;">Coordinate pick-up details</small>
+      </div>
+    </div>
+    <span class="badge bg-white text-primary border rounded-pill px-2 py-1" style="font-size: 0.65rem;">
+      <i class="fa-solid fa-circle text-success me-1"></i> Active
+    </span>
+  </div>
+
+  <!-- Messages List -->
+  <div class="chat-messages flex-grow-1" id="chat-messages-box" style="overflow-y: auto; background-color: #fcfbf9;">
+    {% for msg in chat_messages %}
+      <div class="d-flex flex-column mb-3 {% if msg.sender == user %}align-items-end{% else %}align-items-start{% endif %}">
+        <div class="chat-bubble {% if msg.sender == user %}sent{% else %}received{% endif %} p-2 px-3 shadow-xs">
+          <div class="small fw-bold mb-0" style="font-size: 0.75rem; opacity: 0.95;">
+            {{ msg.sender.get_full_name|default:msg.sender.username }}
+          </div>
+          <div class="my-1" style="font-size: 0.85rem; line-height: 1.3;">
+            {{ msg.message }}
+          </div>
+          <div class="text-end" style="font-size: 0.65rem; opacity: 0.7;">
+            {{ msg.timestamp|date:"h:i A" }}
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <div class="text-center text-muted py-5">
+        <i class="fa-regular fa-comments fs-2 opacity-30 mb-2"></i>
+        <p class="small mb-0">No messages yet. Send a message to coordinate!</p>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Chat Input Form -->
+  <div class="p-3 bg-white border-top">
+    <form hx-post="{% url 'send_chat' trip.id %}" hx-target="#chat-wrapper" hx-swap="outerHTML" hx-on="htmx:afterRequest: document.getElementById('chat-form-input').value = '';" class="input-group">
+      {% csrf_token %}
+      <input type="text" id="chat-form-input" name="message" required class="form-control rounded-start-4 border-light-subtle py-2 px-3" placeholder="Type a message..." style="font-size: 0.9rem;">
+      <button class="btn btn-primary-custom rounded-end-4 px-3" type="submit">
+        <i class="fa-regular fa-paper-plane"></i>
+      </button>
+    </form>
+  </div>
+
+  <!-- Auto scroll to bottom script -->
+  <script>
+    (function() {
+      const chatBox = document.getElementById('chat-messages-box');
+      if (chatBox) {
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+    })();
+  </script>
+</div>

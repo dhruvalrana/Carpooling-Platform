@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+
+{% block title %}Live Tracking — CommuteSync{% endblock %}
+
+{% block extra_head %}
+<style>
+  .track-wrapper {
+    position: relative;
+    height: 600px;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+  }
+  
+  #track-map {
+    height: 100%;
+    width: 100%;
+    z-index: 1;
+  }
+  
+  .floating-sheet {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    border: 1px solid rgba(15, 107, 102, 0.1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col-sm-8 text-center text-sm-start">
+    <h2 class="fw-bold mb-1 text-primary"><i class="fa-solid fa-location-crosshairs me-2"></i>Live Ride Transit</h2>
+    <p class="text-secondary mb-0">Booking ID: #{{ trip.id }} &bull; Driver: <span class="fw-semibold text-dark">{{ trip.ride.driver.get_full_name|default:trip.ride.driver.username }}</span></p>
+  </div>
+  <div class="col-sm-4 text-center text-sm-end mt-3 mt-sm-0">
+    <a href="{% url 'trip_detail' trip.id %}" class="btn btn-outline-primary-custom btn-sm">
+      <i class="fa-solid fa-arrow-left me-1"></i> Trip Dashboard
+    </a>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <div class="track-wrapper shadow-lg position-relative">
+      <!-- Leaflet Map Container -->
+      <div id="track-map"></div>
+      
+      <!-- Floating Bottom Sheet Details -->
+      <div class="floating-sheet p-4">
+        <div class="row align-items-center g-3">
+          <!-- ETA Stats -->
+          <div class="col-md-3 border-end border-light-subtle text-center text-md-start">
+            <span class="badge badge-pill-custom bg-teal-light text-primary mb-2 px-3">Transit Active</span>
+            <h4 class="fw-bold mb-0 text-dark" id="live-eta">Calculating...</h4>
+            <small class="text-muted" id="live-distance">Distance left: -- km</small>
+          </div>
+          
+          <!-- Driver and vehicle Details -->
+          <div class="col-md-5 border-end border-light-subtle px-md-4">
+            <div class="d-flex align-items-center gap-3">
+              <div class="bg-teal-light text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 44px; height: 44px;">
+                {{ trip.ride.driver.username|slice:":1"|upper }}
+              </div>
+              <div>
+                <h6 class="fw-bold text-dark mb-0">{{ trip.ride.driver.get_full_name|default:trip.ride.driver.username }}</h6>
+                <small class="text-secondary d-block">{{ trip.ride.vehicle.color }} {{ trip.ride.vehicle.make }} &bull; <strong class="font-monospace text-primary">{{ trip.ride.vehicle.license_plate }}</strong></small>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Active Actions -->
+          <div class="col-md-4 text-center text-md-end">
+            <div class="d-flex justify-content-center justify-content-md-end gap-2">
+              <a href="{% url 'trip_detail' trip.id %}" class="btn btn-primary-custom px-4 rounded-pill">
+                <i class="fa-solid fa-comments me-1"></i> Open Chat
+              </a>
+              {% if is_driver and trip.status == 'STARTED' %}
+                <form action="{% url 'update_trip_status' trip.id %}" method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="status" value="IN_PROGRESS">
+                  <button type="submit" class="btn btn-accent-custom px-4 rounded-pill">
+                    Mark In-Progress
+                  </button>
+                </form>
+              {% elif is_driver and trip.status == 'IN_PROGRESS' %}
+                <form action="{% url 'update_trip_status' trip.id %}" method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="status" value="COMPLETED">
+                  <button type="submit" class="btn btn-accent-custom px-4 rounded-pill">
+                    Mark Completed
+                  </button>
+                </form>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Pick up and destination coordinates from the ride
+    const startLat = parseFloat("{{ trip.ride.start_lat }}");
+    const startLng = parseFloat("{{ trip.ride.start_lng }}");
+    const endLat = parseFloat("{{ trip.ride.end_lat }}");
+    const endLng = parseFloat("{{ trip.ride.end_lng }}");
+
+    // Initialize tracking map centered on midpoint
+    const midLat = (startLat + endLat) / 2;
+    const midLng = (startLng + endLng) / 2;
+    
+    const map = L.map('track-map').setView([midLat, midLng], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Coral pin for pickup
+    const coralIcon = L.divIcon({
+      className: 'custom-div-icon',
+      html: `<div style="background-color: var(--color-accent); width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+    L.marker([startLat, startLng], {icon: coralIcon}).addTo(map).bindPopup("Pickup Point");
+
+    // Teal pin for destination
+    const tealIcon = L.divIcon({
+      className: 'custom-div-icon',
+      html: `<div style="background-color: var(--color-primary); width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+    L.marker([endLat, endLng], {icon: tealIcon}).addTo(map).bindPopup("Campus Destination");
+
+    // Draw route path line
+    const routePath = L.polyline([[startLat, startLng], [endLat, endLng]], {
+      color: 'var(--color-primary)',
+      weight: 5,
+      opacity: 0.8,
+      dashArray: '8, 12'
+    }).addTo(map);
+    map.fitBounds(routePath.getBounds(), {padding: [100, 100]});
+
+    // Custom Car Pin icon to represent driver transit
+    const carIcon = L.divIcon({
+      className: 'custom-div-icon',
+      html: `<div style="background-color: #ffffff; border: 2px solid var(--color-primary); color: var(--color-primary); width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.25);"><i class="fa-solid fa-car-side"></i></div>`,
+      iconSize: [34, 34],
+      iconAnchor: [17, 17]
+    });
+
+    // Simulated path interpolation: split into 60 segments (stops)
+    const steps = 60;
+    const pathCoordinates = [];
+    for (let i = 0; i <= steps; i++) {
+      const ratio = i / steps;
+      const lat = startLat + (endLat - startLat) * ratio;
+      const lng = startLng + (endLng - startLng) * ratio;
+      pathCoordinates.push([lat, lng]);
+    }
+
+    // Set starting position of moving marker
+    let currentIndex = 0;
+    const movingMarker = L.marker(pathCoordinates[currentIndex], {icon: carIcon}).addTo(map);
+
+    // Distance calculation helper
+    function getDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371; // km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return (R * c).toFixed(2);
+    }
+
+    // Animate car marker along coordinates
+    const interval = setInterval(() => {
+      currentIndex++;
+      if (currentIndex >= pathCoordinates.length) {
+        clearInterval(interval);
+        document.getElementById('live-eta').innerText = "Arrived";
+        document.getElementById('live-distance').innerText = "Distance left: 0 km";
+        return;
+      }
+
+      // Move marker
+      const currPos = pathCoordinates[currentIndex];
+      movingMarker.setLatLng(currPos);
+      
+      // Pan map slightly to keep car centered
+      map.panTo(currPos);
+
+      // Recalculate remaining metrics
+      const distLeft = getDistance(currPos[0], currPos[1], endLat, endLng);
+      const estTime = Math.round(distLeft * 2); // 2 mins per km
+
+      document.getElementById('live-eta').innerText = estTime > 0 ? `${estTime} mins away` : "Arriving now";
+      document.getElementById('live-distance').innerText = `Distance left: ${distLeft} km`;
+    }, 2500); // Step every 2.5 seconds
+  });
+</script>
+{% endblock %}

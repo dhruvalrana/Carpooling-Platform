@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirm Route — CommuteSync{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col-12 text-center text-md-start">
+    <h2 class="fw-bold mb-1 text-primary"><i class="fa-solid fa-map-location-dot me-2"></i>Confirm Commute Route</h2>
+    <p class="text-secondary mb-0">Double-check your pickup, destination, and calculated path metrics before finalizing</p>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Route Metadata & Final CTA -->
+  <div class="col-lg-5">
+    <div class="card card-premium p-4 border-0 bg-white shadow-sm h-100 d-flex flex-column justify-content-between">
+      <div>
+        <h5 class="fw-bold text-primary mb-3">
+          {% if mode == 'find' %}
+            <i class="fa-solid fa-magnifying-glass me-1"></i> Search Confirmation
+          {% else %}
+            <i class="fa-solid fa-circle-plus me-1"></i> Publication Confirmation
+          {% endif %}
+        </h5>
+
+        <!-- Pinned Addresses -->
+        <div class="position-relative ps-4 py-1 mb-4">
+          <div class="position-absolute start-0 top-0 bottom-0 border-start border-dashed border-primary" style="margin-left: 7px; border-style: dashed !important; border-width: 2px;"></div>
+          <div class="position-absolute start-0 top-0 bg-accent rounded-circle" style="width: 14px; height: 14px; border: 3px solid white; transform: translateX(-3px) translateY(4px);"></div>
+          <div class="position-absolute start-0 bottom-0 bg-primary rounded-circle" style="width: 14px; height: 14px; border: 3px solid white; transform: translateX(-3px) translateY(-4px);"></div>
+          
+          <div class="mb-4">
+            <small class="text-secondary d-block">From Pickup</small>
+            <span class="fw-semibold text-dark">{{ start_name }}</span>
+          </div>
+          <div>
+            <small class="text-secondary d-block">To Destination</small>
+            <span class="fw-semibold text-dark">{{ end_name }}</span>
+          </div>
+        </div>
+
+        <!-- Calculated Route Metrics -->
+        <div class="p-3 bg-light rounded-4 border mb-4">
+          <div class="row text-center">
+            <div class="col-6 border-end">
+              <small class="text-secondary d-block">Route Distance</small>
+              <h4 class="fw-bold text-dark mt-1 mb-0">{{ distance }} km</h4>
+            </div>
+            <div class="col-6">
+              <small class="text-secondary d-block">Est. Duration</small>
+              <h4 class="fw-bold text-dark mt-1 mb-0">{{ duration }} mins</h4>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mode-Specific Details -->
+        {% if mode == 'find' %}
+          <div class="bg-teal-light rounded-4 p-3 border mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="text-secondary small">Seats Requested:</span>
+              <span class="fw-bold text-dark">{{ seats }} Seat{{ seats|pluralize }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="text-secondary small">Est. Total Ticket Fare:</span>
+              <span class="fs-4 fw-bold text-accent">₹{{ fare|floatformat:2 }}</span>
+            </div>
+          </div>
+          
+          <form method="get" action="{% url 'ride_results' %}">
+            <input type="hidden" name="start_name" value="{{ start_name }}">
+            <input type="hidden" name="start_lat" value="{{ start_lat }}">
+            <input type="hidden" name="start_lng" value="{{ start_lng }}">
+            <input type="hidden" name="end_name" value="{{ end_name }}">
+            <input type="hidden" name="end_lat" value="{{ end_lat }}">
+            <input type="hidden" name="end_lng" value="{{ end_lng }}">
+            <input type="hidden" name="seats" value="{{ seats }}">
+            
+            <div class="d-flex gap-2">
+              <a href="{% url 'find_ride' %}" class="btn btn-outline-primary-custom w-50 py-3 rounded-4">Back</a>
+              <button type="submit" class="btn btn-primary-custom w-50 py-3 rounded-4 shadow-sm">
+                Confirm & Search
+              </button>
+            </div>
+          </form>
+        {% else %}
+          <div class="bg-teal-light rounded-4 p-3 border mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="text-secondary small">Vehicle:</span>
+              <span class="fw-bold text-dark">{{ vehicle.color }} {{ vehicle.make }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="text-secondary small">Departure Time:</span>
+              <span class="fw-bold text-dark">{{ departure_time_display }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="text-secondary small">Total Capacity:</span>
+              <span class="fw-bold text-dark">{{ total_seats }} Seat{{ total_seats|pluralize }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="text-secondary small">Price per KM:</span>
+              <span class="fw-bold text-dark">₹{{ price_per_km }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="text-secondary small">Est. Full Route Fare:</span>
+              <span class="fs-4 fw-bold text-accent">₹{{ fare_per_seat }}</span>
+            </div>
+          </div>
+          
+          <form method="post" action="{% url 'publish_ride' %}">
+            {% csrf_token %}
+            <input type="hidden" name="vehicle" value="{{ vehicle.id }}">
+            <input type="hidden" name="start_name" value="{{ start_name }}">
+            <input type="hidden" name="start_lat" value="{{ start_lat }}">
+            <input type="hidden" name="start_lng" value="{{ start_lng }}">
+            <input type="hidden" name="end_name" value="{{ end_name }}">
+            <input type="hidden" name="end_lat" value="{{ end_lat }}">
+            <input type="hidden" name="end_lng" value="{{ end_lng }}">
+            <input type="hidden" name="departure_time" value="{{ departure_time }}">
+            <input type="hidden" name="total_seats" value="{{ total_seats }}">
+            <input type="hidden" name="price_per_km" value="{{ price_per_km }}">
+            
+            <div class="d-flex gap-2">
+              <a href="{% url 'offer_ride' %}" class="btn btn-outline-primary-custom w-50 py-3 rounded-4">Back</a>
+              <button type="submit" class="btn btn-accent-custom w-50 py-3 rounded-4 shadow-sm">
+                Confirm & Publish
+              </button>
+            </div>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet Map Preview -->
+  <div class="col-lg-7">
+    <div class="card card-premium p-3 border-0 bg-white shadow-sm h-100">
+      <div id="confirm-map" class="map-container" style="height: 520px; z-index: 10;"></div>
+      <div class="d-flex justify-content-between mt-2 small text-secondary">
+        <span><i class="fa-solid fa-circle text-accent"></i> Pickup (Coral Pin)</span>
+        <span><i class="fa-solid fa-circle text-primary"></i> Destination (Teal Pin)</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const startLat = parseFloat("{{ start_lat }}");
+    const startLng = parseFloat("{{ start_lng }}");
+    const endLat = parseFloat("{{ end_lat }}");
+    const endLng = parseFloat("{{ end_lng }}");
+
+    // Center on midpoint
+    const midLat = (startLat + endLat) / 2;
+    const midLng = (startLng + endLng) / 2;
+    
+    const map = L.map('confirm-map').setView([midLat, midLng], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Coral start pin
+    const coralIcon = L.divIcon({
+      className: 'custom-div-icon',
+      html: `<div style="background-color: var(--color-accent); width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+    L.marker([startLat, startLng], {icon: coralIcon}).addTo(map).bindPopup("Pickup Address").openPopup();
+
+    // Teal end pin
+    const tealIcon = L.divIcon({
+      className: 'custom-div-icon',
+      html: `<div style="background-color: var(--color-primary); width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+    L.marker([endLat, endLng], {icon: tealIcon}).addTo(map).bindPopup("Destination Address");
+
+    // Draw route line
+    const route = L.polyline([[startLat, startLng], [endLat, endLng]], {
+      color: 'var(--color-primary)', 
+      weight: 5,
+      dashArray: '8, 12'
+    }).addTo(map);
+    
+    map.fitBounds(route.getBounds(), {padding: [50, 50]});
+  });
+</script>
+{% endblock %}

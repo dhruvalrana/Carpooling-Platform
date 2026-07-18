@@ -1,0 +1,287 @@
+/* Custom Design System - Sunrise Commute Palette */
+:root {
+  --color-primary: #0F6B66;
+  --color-primary-rgb: 15, 107, 102;
+  --color-primary-light: #E4F2F0;
+  --color-accent: #FF8B5E;
+  --color-accent-hover: #F0723F;
+  --color-bg: #FBF8F3;
+  --color-surface: #FFFFFF;
+  --color-border: #E8E2D8;
+  --color-text-primary: #1F2937;
+  --color-text-secondary: #6B7280;
+  --color-success: #4CAF7D;
+  --color-warning: #F5A623;
+  --color-error: #E5533C;
+  --color-wallet: #8B6BB8;
+  --color-wallet-light: #F3E8FF;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+/* Card Styling */
+.card-premium {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(15, 107, 102, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-premium:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(15, 107, 102, 0.08);
+  border-color: var(--color-primary-light);
+}
+
+/* Button Customizations */
+.btn-primary-custom {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #ffffff;
+  border-radius: 50px;
+  padding: 0.6rem 1.8rem;
+  font-weight: 600;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-primary-custom:hover {
+  background-color: #0c5652;
+  border-color: #0c5652;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.btn-accent-custom {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #ffffff;
+  border-radius: 50px;
+  padding: 0.6rem 1.8rem;
+  font-weight: 600;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-accent-custom:hover {
+  background-color: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.btn-outline-primary-custom {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  background-color: transparent;
+  border-radius: 50px;
+  padding: 0.6rem 1.8rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-outline-primary-custom:hover {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* Badge styling */
+.badge-pill-custom {
+  border-radius: 50px;
+  padding: 0.4em 0.8em;
+  font-weight: 500;
+}
+
+.bg-teal-light {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.bg-wallet-light {
+  background-color: var(--color-wallet-light);
+  color: var(--color-wallet);
+}
+
+/* Navbar customizations */
+.navbar-custom {
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: 0.8rem 1rem;
+}
+
+.navbar-brand-custom {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  color: var(--color-primary) !important;
+  font-size: 1.4rem;
+}
+
+/* Quick-stats and chips */
+.wallet-chip {
+  background: var(--color-wallet-light);
+  color: var(--color-wallet);
+  border-radius: 50px;
+  padding: 0.4rem 1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  transition: transform 0.2s;
+}
+
+.wallet-chip:hover {
+  transform: scale(1.03);
+  color: var(--color-wallet);
+}
+
+/* Stepper Customization */
+.stepper-wrapper {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  margin-bottom: 2rem;
+}
+
+.stepper-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background-color: var(--color-border);
+  z-index: 1;
+  transform: translateY(-50%);
+}
+
+.stepper-item {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: var(--color-bg);
+}
+
+.stepper-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  border: 4px solid var(--color-border);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.stepper-item.completed .stepper-circle {
+  background-color: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.stepper-item.active .stepper-circle {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent-hover);
+  color: #ffffff;
+}
+
+.stepper-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  color: var(--color-text-secondary);
+}
+
+.stepper-item.active .stepper-title {
+  color: var(--color-primary);
+}
+
+.stepper-item.completed .stepper-title {
+  color: var(--color-primary);
+}
+
+/* Floating chat & map containers */
+.map-container {
+  height: 450px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  height: 400px;
+  border-radius: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.chat-messages {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  background: #FBFBFB;
+}
+
+.chat-bubble {
+  max-width: 75%;
+  padding: 0.6rem 1rem;
+  border-radius: 12px;
+  margin-bottom: 0.8rem;
+}
+
+.chat-bubble.sent {
+  background-color: var(--color-primary);
+  color: white;
+  margin-left: auto;
+  border-bottom-right-radius: 2px;
+}
+
+.chat-bubble.received {
+  background-color: #EAEAEA;
+  color: var(--color-text-primary);
+  margin-right: auto;
+  border-bottom-left-radius: 2px;
+}
+
+/* Sidebar layout for Admin */
+.admin-sidebar {
+  min-height: 100vh;
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.admin-sidebar a {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  padding: 0.8rem 1.5rem;
+  display: block;
+  font-weight: 500;
+  border-left: 4px solid transparent;
+  transition: all 0.2s;
+}
+
+.admin-sidebar a:hover, .admin-sidebar a.active {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-left-color: var(--color-accent);
+}

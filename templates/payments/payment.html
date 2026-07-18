@@ -1,96 +1,118 @@
-{% extends "base.html" %}
-{% block title %}Payment{% endblock %}
+{% extends 'base.html' %}
+
+{% block title %}Checkout Payment — CommuteSync{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div>
-    <a href="{% url 'trip_detail' trip.pk %}" style="font-size:0.875rem;color:#888;">← Trip #{{ trip.pk }}</a>
-    <h1 style="margin-top:4px;">Pay for Ride</h1>
-  </div>
-</div>
+<div class="row justify-content-center py-4">
+  <div class="col-md-7 col-lg-6">
+    <div class="card card-premium shadow-sm border-0 bg-white">
+      <div class="card-header bg-white border-bottom py-3 px-4 text-center">
+        <h4 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-credit-card me-2"></i>Settle Ride Fare</h4>
+        <small class="text-secondary">Secure checkout simulation</small>
+      </div>
+      
+      <div class="card-body p-4">
+        <!-- Ticket Summary -->
+        <div class="bg-light rounded-4 p-3 border mb-4">
+          <h6 class="fw-bold text-dark mb-3"><i class="fa-solid fa-ticket me-1 text-primary"></i>Commute Ticket Summary</h6>
+          <div class="row g-2 small text-secondary">
+            <div class="col-6">Booking ID: <strong class="text-dark">#{{ trip.id }}</strong></div>
+            <div class="col-6">Seats Reserved: <strong class="text-dark">{{ trip.seats_booked }}</strong></div>
+            <div class="col-12 mt-2">Route: <strong class="text-dark">{{ trip.ride.start_point_name|truncatechars:35 }} &rarr; {{ trip.ride.end_point_name|truncatechars:35 }}</strong></div>
+            <div class="col-12 mt-2">Driver: <strong class="text-dark">{{ trip.ride.driver.get_full_name|default:trip.ride.driver.username }}</strong></div>
+          </div>
+          
+          <hr class="my-3">
+          
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="fw-bold text-dark mb-0">Total Due Fare:</span>
+            <span class="fs-3 fw-bold text-accent">₹{{ trip.fare_paid }}</span>
+          </div>
+        </div>
 
-<div class="page-body" style="max-width:560px;">
+        <!-- Payment Mode Selectors -->
+        <form method="post" action="{% url 'payment' trip.id %}" x-data="{ selectedMethod: 'wallet' }">
+          {% csrf_token %}
+          
+          <label class="form-label fw-semibold text-secondary small d-block mb-3">Choose Payment Method</label>
+          
+          <div class="d-flex flex-column gap-3 mb-4">
+            <!-- Wallet Payment -->
+            <label class="border rounded-4 p-3 d-flex align-items-center justify-content-between cursor-pointer transition-all bg-white" 
+                   :class="{'border-primary bg-teal-light': selectedMethod === 'wallet'}" style="border: 1px solid var(--color-border);">
+              <div class="d-flex align-items-center gap-3">
+                <input type="radio" name="payment_method" value="wallet" checked @change="selectedMethod = 'wallet'" class="form-check-input" style="accent-color: var(--color-primary);">
+                <div class="bg-wallet-light text-wallet rounded-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; color: var(--color-wallet);">
+                  <i class="fa-solid fa-wallet"></i>
+                </div>
+                <div>
+                  <span class="fw-bold text-dark d-block">Commute Wallet Balance</span>
+                  <small class="text-secondary">Available balance: ₹{{ user.wallet_balance|floatformat:2 }}</small>
+                </div>
+              </div>
+              <span class="badge bg-white text-secondary border small rounded-pill px-3 py-1">Instant</span>
+            </label>
 
-  <!-- Fare display -->
-  <div class="card mb-6">
-    <div class="card-body" style="text-align:center;padding:40px;">
-      <div style="font-size:0.875rem;color:#888;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;">Amount Due</div>
-      <div class="mono" style="font-size:3rem;font-weight:700;color:var(--route-amber);">₹{{ trip.fare_amount }}</div>
-      <div style="font-size:0.875rem;color:#888;margin-top:8px;">{{ trip.ride.pickup_label|truncatechars:25 }} → {{ trip.ride.destination_label|truncatechars:25 }}</div>
+            <!-- UPI Payment -->
+            <label class="border rounded-4 p-3 d-flex align-items-center justify-content-between cursor-pointer transition-all bg-white" 
+                   :class="{'border-primary bg-teal-light': selectedMethod === 'upi'}" style="border: 1px solid var(--color-border);">
+              <div class="d-flex align-items-center gap-3">
+                <input type="radio" name="payment_method" value="upi" @change="selectedMethod = 'upi'" class="form-check-input" style="accent-color: var(--color-primary);">
+                <div class="bg-primary-subtle text-primary rounded-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; color: var(--color-primary); background-color: var(--color-primary-light);">
+                  <i class="fa-solid fa-mobile-screen-button"></i>
+                </div>
+                <div>
+                  <span class="fw-bold text-dark d-block">UPI (GooglePay/PhonePe)</span>
+                  <small class="text-secondary">Pay using secure UPI app link</small>
+                </div>
+              </div>
+              <span class="badge bg-white text-secondary border small rounded-pill px-3 py-1">Fast</span>
+            </label>
+
+            <!-- Credit/Debit Card -->
+            <label class="border rounded-4 p-3 d-flex align-items-center justify-content-between cursor-pointer transition-all bg-white" 
+                   :class="{'border-primary bg-teal-light': selectedMethod === 'card'}" style="border: 1px solid var(--color-border);">
+              <div class="d-flex align-items-center gap-3">
+                <input type="radio" name="payment_method" value="card" @change="selectedMethod = 'card'" class="form-check-input" style="accent-color: var(--color-primary);">
+                <div class="bg-info-subtle text-info rounded-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; color: #0dcaf0; background-color: #e0fcff;">
+                  <i class="fa-solid fa-credit-card"></i>
+                </div>
+                <div>
+                  <span class="fw-bold text-dark d-block">Credit / Debit Card</span>
+                  <small class="text-secondary">Visa, MasterCard, AmericanExpress</small>
+                </div>
+              </div>
+              <span class="badge bg-white text-secondary border small rounded-pill px-3 py-1">Standard</span>
+            </label>
+
+            <!-- Cash Settle -->
+            <label class="border rounded-4 p-3 d-flex align-items-center justify-content-between cursor-pointer transition-all bg-white" 
+                   :class="{'border-primary bg-teal-light': selectedMethod === 'cash'}" style="border: 1px solid var(--color-border);">
+              <div class="d-flex align-items-center gap-3">
+                <input type="radio" name="payment_method" value="cash" @change="selectedMethod = 'cash'" class="form-check-input" style="accent-color: var(--color-primary);">
+                <div class="bg-warning-subtle text-accent rounded-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; color: var(--color-accent); background-color: #FFF0EB;">
+                  <i class="fa-solid fa-hand-holding-dollar"></i>
+                </div>
+                <div>
+                  <span class="fw-bold text-dark d-block">Cash Settle In-Person</span>
+                  <small class="text-secondary">Settle cash directly inside car</small>
+                </div>
+              </div>
+              <span class="badge bg-white text-secondary border small rounded-pill px-3 py-1">Manual</span>
+            </label>
+          </div>
+
+          <div class="d-flex gap-3">
+            <a href="{% url 'trip_detail' trip.id %}" class="btn btn-outline-primary-custom w-50 py-3 rounded-4">
+              Cancel
+            </a>
+            <button type="submit" class="btn btn-accent-custom w-50 py-3 rounded-4 shadow-sm">
+              <i class="fa-solid fa-lock me-1"></i> Pay ₹{{ trip.fare_paid }}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
-
-  <!-- Payment methods -->
-  <div class="card mb-6">
-    <div class="card-header"><h2>Select Payment Method</h2></div>
-    <div class="card-body">
-      <div class="payment-methods" id="payment-methods">
-
-        <form method="post" action="{% url 'process_payment' trip.pk %}">
-          {% csrf_token %}
-          <input type="hidden" name="method" value="CASH">
-          <button type="submit" class="payment-card" id="pay-cash-btn" style="width:100%;text-align:center;">
-            <div class="method-icon">💵</div>
-            <div class="method-name">Cash</div>
-            <div style="font-size:0.75rem;color:#888;margin-top:4px;">Pay driver directly</div>
-          </button>
-        </form>
-
-        <form method="post" action="{% url 'process_payment' trip.pk %}">
-          {% csrf_token %}
-          <input type="hidden" name="method" value="WALLET">
-          <button type="submit" class="payment-card" id="pay-wallet-btn" style="width:100%;text-align:center;" {% if wallet.balance < trip.fare_amount %}disabled{% endif %}>
-            <div class="method-icon">👛</div>
-            <div class="method-name">Wallet</div>
-            <div class="mono" style="font-size:0.75rem;color:{% if wallet.balance >= trip.fare_amount %}var(--eco-teal){% else %}var(--alert-rust){% endif %};margin-top:4px;">Balance: ₹{{ wallet.balance }}</div>
-          </button>
-        </form>
-
-        <form method="post" action="{% url 'process_payment' trip.pk %}" id="card-form">
-          {% csrf_token %}
-          <input type="hidden" name="method" value="CARD">
-          <button type="submit" class="payment-card" id="pay-card-btn" style="width:100%;text-align:center;">
-            <div class="method-icon">💳</div>
-            <div class="method-name">Card</div>
-            <div style="font-size:0.75rem;color:#888;margin-top:4px;">Visa / Mastercard</div>
-          </button>
-        </form>
-
-        <form method="post" action="{% url 'process_payment' trip.pk %}">
-          {% csrf_token %}
-          <input type="hidden" name="method" value="UPI">
-          <button type="submit" class="payment-card" id="pay-upi-btn" style="width:100%;text-align:center;">
-            <div class="method-icon">📱</div>
-            <div class="method-name">UPI</div>
-            <div style="font-size:0.75rem;color:#888;margin-top:4px;">Google Pay / PhonePe</div>
-          </button>
-        </form>
-
-      </div>
-
-      {% if wallet.balance < trip.fare_amount %}
-      <div class="alert alert-warning" style="margin-top:16px;">
-        Insufficient wallet balance. <a href="{% url 'wallet_recharge' %}" style="font-weight:600;">Top up →</a>
-      </div>
-      {% endif %}
-    </div>
-  </div>
-
-  <div style="font-size:0.75rem;color:#aaa;text-align:center;">
-    Card and UPI payments are processed via Razorpay Test Mode. No real money is charged.
-  </div>
-
 </div>
-{% endblock %}
-
-{% block extra_scripts %}
-<script>
-// Add selected state to payment cards on hover
-document.querySelectorAll('.payment-card').forEach(card => {
-  card.addEventListener('mouseenter', () => {
-    document.querySelectorAll('.payment-card').forEach(c => c.classList.remove('selected'));
-    card.classList.add('selected');
-  });
-});
-</script>
 {% endblock %}

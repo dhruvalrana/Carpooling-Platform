@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+
+{% block title %}Saved Places — CommuteSync{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col-sm-8 text-center text-sm-start">
+    <h2 class="fw-bold mb-1 text-primary"><i class="fa-regular fa-bookmark me-2"></i>Saved Locations</h2>
+    <p class="text-secondary mb-0">Bookmark commute hubs for quick location search setup</p>
+  </div>
+  <div class="col-sm-4 text-center text-sm-end mt-3 mt-sm-0">
+    <a href="{% url 'settings' %}" class="btn btn-outline-primary-custom btn-sm">
+      <i class="fa-solid fa-chevron-left me-1"></i> Back to Settings
+    </a>
+  </div>
+</div>
+
+<div class="row g-4" x-data="placeSelector()">
+  <!-- Left Side: List & Form -->
+  <div class="col-md-5">
+    <!-- List of Saved Places -->
+    <div class="card card-premium p-4 shadow-sm border-0 mb-4 bg-white">
+      <h5 class="fw-bold text-primary mb-3"><i class="fa-solid fa-list me-2"></i>My Bookmarked Places</h5>
+      {% if places %}
+        <div class="d-flex flex-column gap-2">
+          {% for place in places %}
+            <div class="d-flex align-items-center justify-content-between p-3 border rounded-4 bg-white hover-shadow">
+              <div class="d-flex align-items-center gap-3">
+                <div class="bg-teal-light text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                  <i class="fa-solid fa-location-dot"></i>
+                </div>
+                <div>
+                  <h6 class="fw-bold text-dark mb-0" style="font-size: 0.9rem;">{{ place.name }}</h6>
+                  <small class="text-secondary text-truncate d-block" style="max-width: 180px;">{{ place.address }}</small>
+                </div>
+              </div>
+              <a href="{% url 'delete_saved_place' place.id %}" class="text-danger text-decoration-none" title="Remove place">
+                <i class="fa-solid fa-trash-can"></i>
+              </a>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-secondary small mb-0">No locations bookmarked yet.</p>
+      {% endif %}
+    </div>
+
+    <!-- Add Saved Place Form -->
+    <div class="card card-premium p-4 shadow-sm border-0 bg-white">
+      <h5 class="fw-bold text-primary mb-3"><i class="fa-solid fa-circle-plus me-1"></i>Bookmark New Place</h5>
+      <form method="post" action="{% url 'saved_places' %}" @submit="validateForm($event)">
+        {% csrf_token %}
+        
+        <div class="mb-3">
+          <label class="form-label fw-semibold text-secondary small">Label / Name</label>
+          {{ form.name }}
+          <div class="form-text small text-muted">e.g. Home, Office HQ, Gym</div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold text-secondary small">Address String</label>
+          {{ form.address }}
+        </div>
+
+        {{ form.latitude }}
+        {{ form.longitude }}
+
+        <button type="submit" class="btn btn-primary-custom w-100 py-3 rounded-4 shadow-sm">
+          <i class="fa-solid fa-floppy-disk me-2"></i> Save Location
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Right Side: Leaflet Map Click -->
+  <div class="col-md-7">
+    <div class="card card-premium p-3 shadow-sm border-0 bg-white h-100">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <h5 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-map-location-dot me-2"></i>Pin Location Map</h5>
+        <span class="text-secondary small">Click map to auto-fill lat/lng values</span>
+      </div>
+      <div id="place-map" class="map-container" style="height: 520px; z-index: 10;"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function placeSelector() {
+    return {
+      map: null,
+      marker: null,
+
+      init() {
+        this.map = L.map('place-map').setView([23.0225, 72.5714], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(this.map);
+
+        // Click map handler
+        this.map.on('click', (e) => {
+          this.setPin(e.latlng.lat, e.latlng.lng);
+        });
+      },
+
+      setPin(lat, lng) {
+        if (this.marker) {
+          this.map.removeLayer(this.marker);
+        }
+        
+        const coralIcon = L.divIcon({
+          className: 'custom-div-icon',
+          html: `<div style="background-color: var(--color-accent); width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
+          iconSize: [14, 14],
+          iconAnchor: [7, 7]
+        });
+
+        this.marker = L.marker([lat, lng], {icon: coralIcon}).addTo(this.map);
+        
+        document.getElementById('place_lat').value = lat.toFixed(6);
+        document.getElementById('place_lng').value = lng.toFixed(6);
+        
+        // Auto fill address if empty
+        const addressInput = document.getElementsByName('address')[0];
+        if (addressInput && !addressInput.value) {
+          addressInput.value = `Pinned Coordinate (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+        }
+      },
+
+      validateForm(e) {
+        const lat = document.getElementById('place_lat').value;
+        if (!lat) {
+          e.preventDefault();
+          alert('Please click on the map to set coordinate values first.');
+        }
+      }
+    };
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+
+{% block title %}Search Results — CommuteSync{% endblock %}
+
+{% block content %}
+<!-- Search Summary Header -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card card-premium p-3 border-0 bg-white shadow-sm">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <h4 class="fw-bold mb-1 text-primary">Matching Rides Found</h4>
+          <p class="text-secondary mb-0 small">
+            Route: <span class="fw-semibold text-dark">{{ start_name|truncatechars:35 }}</span> 
+            &rarr; <span class="fw-semibold text-dark">{{ end_name|truncatechars:35 }}</span> 
+            ({{ route_distance }} km)
+          </p>
+        </div>
+        <div class="col-md-4 text-md-end mt-2 mt-md-0">
+          <a href="{% url 'find_ride' %}" class="btn btn-outline-primary-custom btn-sm">
+            <i class="fa-solid fa-arrow-left me-1"></i> Change Route
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Rides List Column -->
+  <div class="col-lg-6">
+    {% if rides %}
+      <div class="d-flex flex-column gap-3">
+        {% for item in rides %}
+          <div class="card card-premium p-3 border-0 hover-shadow transition-all bg-white">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div class="d-flex align-items-center gap-2">
+                <!-- Driver Avatar -->
+                <div class="bg-teal-light rounded-circle d-flex align-items-center justify-content-center text-primary fw-bold" style="width: 44px; height: 44px; font-size: 1.1rem;">
+                  {{ item.ride.driver.username|slice:":1"|upper }}
+                </div>
+                <div>
+                  <h6 class="fw-bold text-dark mb-0">{{ item.ride.driver.get_full_name|default:item.ride.driver.username }}</h6>
+                  <small class="text-secondary text-truncate d-block">{{ item.ride.driver.department|default:"Employee" }}</small>
+                </div>
+              </div>
+              
+              <!-- Fare Tag -->
+              <div class="text-end">
+                <span class="fs-4 fw-bold text-accent">${{ item.passenger_fare }}</span>
+                <small class="text-muted d-block" style="font-size: 0.7rem;">(${{ item.ride.price_per_km }}/km rate)</small>
+              </div>
+            </div>
+
+            <!-- Ride Details Body -->
+            <div class="row bg-light rounded-4 p-3 mb-3 g-2 mx-0" style="border: 1px solid var(--color-border);">
+              <div class="col-6">
+                <small class="text-secondary d-block">Departure</small>
+                <span class="fw-semibold text-dark small"><i class="fa-regular fa-clock me-1 text-primary"></i> {{ item.ride.departure_time|date:"M d, h:i A" }}</span>
+              </div>
+              <div class="col-6">
+                <small class="text-secondary d-block">Vehicle Info</small>
+                <span class="fw-semibold text-dark small"><i class="fa-solid fa-car me-1 text-primary"></i> {{ item.ride.vehicle.color }} {{ item.ride.vehicle.make }}</span>
+              </div>
+              <div class="col-6">
+                <small class="text-secondary d-block">Match Proximity</small>
+                <span class="fw-semibold text-dark small"><i class="fa-solid fa-person-walking me-1 text-accent"></i> {{ item.pickup_dist }} km away</span>
+              </div>
+              <div class="col-6">
+                <small class="text-secondary d-block">Seats Left</small>
+                <span class="fw-semibold text-dark small">
+                  {% with ''|center:item.ride.total_seats as range %}
+                    {% for _ in range %}
+                      {% if forloop.counter <= item.ride.seats_available %}
+                        <i class="fa-solid fa-couch text-primary me-1" title="Available seat" style="font-size: 0.8rem;"></i>
+                      {% else %}
+                        <i class="fa-solid fa-couch text-muted opacity-30 me-1" title="Booked seat" style="font-size: 0.8rem;"></i>
+                      {% endif %}
+                    {% endfor %}
+                  {% endwith %}
+                  <span class="ms-1">{{ item.ride.seats_available }}/{{ item.ride.total_seats }}</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Booking Section -->
+            <form action="{% url 'book_ride' %}" method="post" class="d-flex align-items-center gap-3">
+              {% csrf_token %}
+              <input type="hidden" name="ride_id" value="{{ item.ride.id }}">
+              <input type="hidden" name="start_lat" value="{{ start_lat }}">
+              <input type="hidden" name="start_lng" value="{{ start_lng }}">
+              <input type="hidden" name="end_lat" value="{{ end_lat }}">
+              <input type="hidden" name="end_lng" value="{{ end_lng }}">
+              
+              <div class="d-flex align-items-center gap-2">
+                <label class="small text-secondary fw-semibold mb-0" style="white-space: nowrap;">Reserve seats:</label>
+                <select name="seats_booked" class="form-select form-select-sm rounded-3" style="width: 70px;">
+                  {% with ''|center:item.ride.seats_available as range %}
+                    {% for _ in range %}
+                      <option value="{{ forloop.counter }}" {% if forloop.counter == seats_requested %}selected{% endif %}>{{ forloop.counter }}</option>
+                    {% endfor %}
+                  {% endwith %}
+                </select>
+              </div>
+
+              <button type="submit" class="btn btn-accent-custom btn-sm py-2 px-4 rounded-pill ms-auto shadow-sm">
+                <i class="fa-solid fa-bookmark me-1"></i> Book Seat
+              </button>
+            </form>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card card-premium p-5 text-center shadow-sm border-0 bg-white">
+        <div class="opacity-20 mb-4 text-primary" style="font-size: 4rem;">
+          <i class="fa-solid fa-map-location-dot"></i>
+        </div>
+        <h4 class="fw-bold text-dark mb-2">No Matching Rides Found</h4>
+        <p class="text-secondary mb-4" style="max-width: 500px; margin: 0 auto;">
+          We couldn't find any driver commutes matching your pick-up and drop-off range (within 10 km).
+        </p>
+        <a href="{% url 'find_ride' %}" class="btn btn-primary-custom px-5 py-3 rounded-4 shadow-sm" style="max-width: fit-content; margin: 0 auto;">
+          <i class="fa-solid fa-arrow-left me-2"></i> Try Another Location
+        </a>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Map Preview Column -->
+  <div class="col-lg-6">
+    <div class="card card-premium p-3 shadow-sm border-0 bg-white h-100">
+      <h5 class="fw-bold mb-2 text-primary"><i class="fa-solid fa-map-location-dot me-2"></i>Available Routes Map</h5>
+      <div id="results-map" class="map-container" style="height: 520px; z-index: 10;"></div>
+      <div class="d-flex justify-content-between mt-2 small text-secondary">
+        <span><i class="fa-solid fa-circle text-accent"></i> Search Pickup</span>
+        <span><i class="fa-solid fa-circle text-primary"></i> Driver Pickups</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Initialize results map centered on the passenger search pickup point
+    const searchLat = parseFloat("{{ start_lat }}");
+    const searchLng = parseFloat("{{ start_lng }}");
+    const destLat = parseFloat("{{ end_lat }}");
+    const destLng = parseFloat("{{ end_lng }}");
+
+    const map = L.map('results-map').setView([searchLat, searchLng], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Search Pickup pin (Accent color coral)
+    const coralIcon = L.divIcon({
+      className: 'custom-div-icon',
+      html: `<div style="background-color: var(--color-accent); width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+    L.marker([searchLat, searchLng], {icon: coralIcon}).addTo(map).bindPopup("Your Pickup Point").openPopup();
+
+    // Search Destination pin
+    const endIcon = L.divIcon({
+      className: 'custom-div-icon',
+      html: `<div style="background-color: #000; width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+    L.marker([destLat, destLng], {icon: endIcon}).addTo(map).bindPopup("Your Destination");
+
+    // Add pins for matching drivers' pickup locations
+    const driverIcon = L.divIcon({
+      className: 'custom-div-icon',
+      html: `<div style="background-color: var(--color-primary); width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+
+    {% for item in rides %}
+      L.marker([parseFloat("{{ item.ride.start_lat }}"), parseFloat("{{ item.ride.start_lng }}")], {icon: driverIcon})
+        .addTo(map)
+        .bindPopup(`<b>{{ item.ride.driver.get_full_name|default:item.ride.driver.username }}</b><br>Fare: ₹${ parseFloat("{{ item.passenger_fare }}") }`);
+    {% endfor %}
+  });
+</script>
+{% endblock %}

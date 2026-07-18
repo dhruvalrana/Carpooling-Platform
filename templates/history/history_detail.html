@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block title %}Receipt Detail — CommuteSync{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col-sm-8 text-center text-sm-start">
+    <h2 class="fw-bold mb-1 text-primary"><i class="fa-solid fa-file-invoice-dollar me-2"></i>Commute Receipt</h2>
+    <p class="text-secondary mb-0">Booking ID: #{{ trip.id }} &bull; Settle completed</p>
+  </div>
+  <div class="col-sm-4 text-center text-sm-end mt-3 mt-sm-0">
+    <a href="{% url 'history_list' %}" class="btn btn-outline-primary-custom btn-sm">
+      <i class="fa-solid fa-chevron-left me-1"></i> Back to History
+    </a>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card card-premium p-4 border-0 bg-white shadow-sm">
+      <!-- Success Badge -->
+      <div class="text-center mb-4">
+        <span class="badge badge-pill-custom bg-success text-white py-2 px-3 fw-bold" style="background-color: var(--color-success) !important;">
+          <i class="fa-solid fa-circle-check me-1"></i> Settled & Paid
+        </span>
+        <h2 class="fw-bold text-dark mt-3 mb-0">₹{{ trip.fare_paid }}</h2>
+        <small class="text-muted">Total settled fare amount</small>
+      </div>
+
+      <hr class="my-4">
+
+      <!-- Details Block -->
+      <h6 class="fw-bold text-primary mb-3">Journey Details</h6>
+      
+      <div class="position-relative ps-4 py-1 mb-4">
+        <div class="position-absolute start-0 top-0 bottom-0 border-start border-dashed border-primary" style="margin-left: 7px; border-style: dashed !important; border-width: 2px;"></div>
+        <div class="position-absolute start-0 top-0 bg-accent rounded-circle" style="width: 14px; height: 14px; border: 3px solid white; transform: translateX(-3px) translateY(4px);"></div>
+        <div class="position-absolute start-0 bottom-0 bg-primary rounded-circle" style="width: 14px; height: 14px; border: 3px solid white; transform: translateX(-3px) translateY(-4px);"></div>
+        
+        <div class="mb-4">
+          <small class="text-secondary d-block">Pickup Location</small>
+          <span class="fw-semibold text-dark">{{ trip.ride.start_point_name }}</span>
+        </div>
+        <div>
+          <small class="text-secondary d-block">Drop-off Campus</small>
+          <span class="fw-semibold text-dark">{{ trip.ride.end_point_name }}</span>
+        </div>
+      </div>
+
+      <div class="row g-3 bg-light rounded-4 p-3 mb-4 border mx-0 small">
+        <div class="col-sm-6">
+          <span class="text-secondary">Commute Date:</span>
+          <strong class="text-dark d-block mt-1">{{ trip.ride.departure_time|date:"M d, Y, h:i A" }}</strong>
+        </div>
+        <div class="col-sm-6">
+          <span class="text-secondary">Vehicle Fleet:</span>
+          <strong class="text-dark d-block mt-1">{{ trip.ride.vehicle.color }} {{ trip.ride.vehicle.make }} ({{ trip.ride.vehicle.license_plate }})</strong>
+        </div>
+      </div>
+
+      <!-- Bill Breakdown -->
+      <h6 class="fw-bold text-primary mb-3">Bill Breakdown</h6>
+      <div class="list-group list-group-flush mb-4 small">
+        <div class="list-group-item d-flex justify-content-between py-2 border-0 bg-transparent">
+          <span class="text-secondary">Fare per seat</span>
+          <span class="fw-semibold text-dark">₹{{ trip.ride.fare_per_seat }}</span>
+        </div>
+        <div class="list-group-item d-flex justify-content-between py-2 border-0 bg-transparent">
+          <span class="text-secondary">Seats reserved</span>
+          <span class="fw-semibold text-dark">{{ trip.seats_booked }}</span>
+        </div>
+        <div class="list-group-item d-flex justify-content-between py-2 border-bottom bg-transparent fw-bold text-dark">
+          <span>Grand Total Settle</span>
+          <span>₹{{ trip.fare_paid }}</span>
+        </div>
+      </div>
+
+      <div class="row text-center text-secondary small pt-3 border-top">
+        <div class="col-6 border-end">
+          <i class="fa-solid fa-leaf text-success me-1"></i>
+          <span>CO2 saved: <strong>{% widthratio distance 12 2 %} kg</strong></span>
+        </div>
+        <div class="col-6">
+          <i class="fa-solid fa-car-side text-primary me-1"></i>
+          <span>Distance: <strong>{{ distance }} km</strong></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

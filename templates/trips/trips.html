@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+
+{% block title %}My Trips — CommuteSync{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col-12 text-center text-md-start">
+    <h2 class="fw-bold mb-1 text-primary"><i class="fa-solid fa-route me-2"></i>My Journeys</h2>
+    <p class="text-secondary mb-0">Track and manage your upcoming and completed carpools</p>
+  </div>
+</div>
+
+<div class="card card-premium border-0 shadow-sm bg-white" x-data="{ activeTab: 'passenger' }">
+  <div class="card-header bg-white border-bottom p-0">
+    <ul class="nav nav-tabs border-0 px-4" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link py-3 px-4 fw-semibold text-secondary" :class="{'active text-primary border-bottom border-primary border-3': activeTab === 'passenger'}" @click="activeTab = 'passenger'">
+          <i class="fa-solid fa-person-seat me-2"></i> Traveling as Passenger
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link py-3 px-4 fw-semibold text-secondary" :class="{'active text-primary border-bottom border-primary border-3': activeTab === 'driver'}" @click="activeTab = 'driver'">
+          <i class="fa-solid fa-wheelchair-kneel me-2" style="transform: rotate(0deg); display: inline-block;"></i> <i class="fa-solid fa-steering-wheel me-2"></i> Driving (Offered Rides)
+        </button>
+      </li>
+    </ul>
+  </div>
+
+  <div class="card-body p-4">
+    <!-- Passenger Tab Content -->
+    <div x-show="activeTab === 'passenger'">
+      {% if passenger_trips %}
+        <div class="row g-4">
+          {% for trip in passenger_trips %}
+            <div class="col-md-6 col-lg-4">
+              <div class="border rounded-4 p-3 hover-shadow transition-all bg-white" style="border-color: var(--color-border) !important;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <span class="badge badge-pill-custom bg-teal-light px-3 py-1">
+                    {{ trip.get_status_display }}
+                  </span>
+                  <span class="text-secondary small fw-semibold">{{ trip.ride.departure_time|date:"M d, h:i A" }}</span>
+                </div>
+                
+                <div class="mb-3">
+                  <div class="small text-secondary mb-1">Route</div>
+                  <div class="fw-semibold text-dark text-truncate">
+                    {{ trip.ride.start_point_name|truncatechars:30 }} &rarr; {{ trip.ride.end_point_name|truncatechars:30 }}
+                  </div>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between mb-3 border-top pt-2">
+                  <div>
+                    <div class="small text-secondary">Driver</div>
+                    <div class="fw-semibold text-dark small">{{ trip.ride.driver.get_full_name|default:trip.ride.driver.username }}</div>
+                  </div>
+                  <div class="text-end">
+                    <div class="small text-secondary">Fare Paid</div>
+                    <div class="fw-bold text-accent">₹{{ trip.fare_paid }}</div>
+                  </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                  <a href="{% url 'trip_detail' trip.id %}" class="btn btn-sm btn-outline-primary-custom w-50 rounded-pill small">
+                    Details
+                  </a>
+                  {% if trip.status == 'STARTED' or trip.status == 'IN_PROGRESS' %}
+                    <a href="{% url 'track_trip' trip.id %}" class="btn btn-sm btn-accent-custom w-50 rounded-pill small">
+                      <i class="fa-solid fa-location-crosshairs"></i> Track Live
+                    </a>
+                  {% elif trip.status == 'PAYMENT_PENDING' %}
+                    <a href="{% url 'payment' trip.id %}" class="btn btn-sm btn-accent-custom w-50 rounded-pill small">
+                      <i class="fa-solid fa-credit-card"></i> Pay Now
+                    </a>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-center py-5">
+          <div class="opacity-20 mb-3 text-secondary" style="font-size: 3rem;">
+            <i class="fa-solid fa-car-side"></i>
+          </div>
+          <h5 class="fw-bold text-dark">No journeys booked yet</h5>
+          <p class="text-secondary mb-4">Book carpool rides to campus and start saving.</p>
+          <a href="{% url 'find_ride' %}" class="btn btn-primary-custom px-4 py-2 rounded-4 shadow-sm">
+            <i class="fa-solid fa-search me-1"></i> Find Rides
+          </a>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Driver Tab Content -->
+    <div x-show="activeTab === 'driver'" style="display: none;">
+      {% if driver_rides %}
+        <div class="row g-4">
+          {% for ride in driver_rides %}
+            <div class="col-md-6 col-lg-4">
+              <div class="border rounded-4 p-3 hover-shadow transition-all bg-white" style="border-color: var(--color-border) !important;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <span class="badge badge-pill-custom bg-warning-subtle text-accent px-3 py-1" style="background-color: #FFF0EB !important;">
+                    {{ ride.get_status_display }}
+                  </span>
+                  <span class="text-secondary small fw-semibold">{{ ride.departure_time|date:"M d, h:i A" }}</span>
+                </div>
+                
+                <div class="mb-3">
+                  <div class="small text-secondary mb-1">Route</div>
+                  <div class="fw-semibold text-dark text-truncate">
+                    {{ ride.start_point_name|truncatechars:30 }} &rarr; {{ ride.end_point_name|truncatechars:30 }}
+                  </div>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between mb-3 border-top pt-2">
+                  <div>
+                    <div class="small text-secondary">Vehicle</div>
+                    <div class="fw-semibold text-dark small">{{ ride.vehicle.make }} {{ ride.vehicle.model }}</div>
+                  </div>
+                  <div class="text-end">
+                    <div class="small text-secondary">Seats Sold</div>
+                    <div class="fw-bold text-primary">{{ ride.seats_available }} / {{ ride.total_seats }} left</div>
+                  </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                  {% with ride.trips.first as first_trip %}
+                    {% if first_trip %}
+                      <a href="{% url 'trip_detail' first_trip.id %}" class="btn btn-sm btn-primary-custom w-100 rounded-pill small">
+                        Manage Trip
+                      </a>
+                    {% else %}
+                      <button class="btn btn-sm btn-outline-secondary w-100 rounded-pill small" disabled>
+                        No Passengers Yet
+                      </button>
+                    {% endif %}
+                  {% endwith %}
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-center py-5">
+          <div class="opacity-20 mb-3 text-secondary" style="font-size: 3rem;">
+            <i class="fa-solid fa-road"></i>
+          </div>
+          <h5 class="fw-bold text-dark">No ride offers published yet</h5>
+          <p class="text-secondary mb-4">Got a car? Publish empty seats to coordinate with colleagues.</p>
+          <a href="{% url 'offer_ride' %}" class="btn btn-accent-custom px-4 py-2 rounded-4 shadow-sm">
+            <i class="fa-solid fa-plus me-1"></i> Offer a Ride
+          </a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

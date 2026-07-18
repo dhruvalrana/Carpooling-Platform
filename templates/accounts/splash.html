@@ -1,35 +1,111 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CarpoolOrg — Enterprise Carpooling</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
-  {% load static %}<link rel="stylesheet" href="{% static 'css/main.css' %}">
-</head>
-<body>
-<div class="splash-screen">
-  <div class="splash-brand">
-    <!-- Route line signature element -->
-    <div class="splash-route" style="justify-content:center;margin-bottom:32px;">
-      <div class="splash-dot"></div>
-      <div class="splash-dashes"></div>
-      <div class="splash-dot" style="background:rgba(232,163,61,0.4);"></div>
+{% extends 'base.html' %}
+
+{% block title %}CommuteSync — Smart Enterprise Carpooling{% endblock %}
+
+{% block content %}
+<div class="row align-items-center min-vh-75 py-5">
+  <div class="col-lg-6 mb-5 mb-lg-0 text-center text-lg-start">
+    <span class="badge badge-pill-custom bg-teal-light mb-3 px-3 py-2 fw-semibold">
+      <i class="fa-solid fa-leaf me-1"></i> Eco-Friendly Workplace Commutes
+    </span>
+    <h1 class="display-4 fw-bold mb-3" style="color: var(--color-primary); font-family: 'Poppins', sans-serif;">
+      Commute Together.<br>
+      <span style="color: var(--color-accent);">Save Together.</span>
+    </h1>
+    <p class="lead text-secondary mb-4 fs-5" style="max-width: 550px;">
+      Welcome to your company's carpooling hub. Connect with colleagues, reduce carbon emissions, split travel expenses, and make your daily commute collaborative.
+    </p>
+    <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center justify-content-lg-start">
+      <a href="{% url 'signup' %}" class="btn btn-accent-custom px-5 py-3 fs-6 shadow-sm">
+        <i class="fa-solid fa-user-plus me-2"></i> Join Your Colleagues
+      </a>
+      <a href="{% url 'login' %}" class="btn btn-outline-primary-custom px-5 py-3 fs-6">
+        <i class="fa-solid fa-right-to-bracket me-2"></i> Log In
+      </a>
     </div>
-
-    <div class="wordmark">CarpoolOrg</div>
-    <p class="tagline">Enterprise ride sharing — share your commute</p>
+    
+    <div class="row mt-5 pt-3 border-top border-light-subtle text-start d-none d-sm-flex">
+      <div class="col-4">
+        <h4 class="fw-bold mb-1 text-primary">5k+</h4>
+        <small class="text-secondary text-uppercase font-monospace" style="font-size: 0.75rem;">CO2 kg Saved</small>
+      </div>
+      <div class="col-4 border-start border-light-subtle">
+        <h4 class="fw-bold mb-1 text-primary">12k+</h4>
+        <small class="text-secondary text-uppercase font-monospace" style="font-size: 0.75rem;">Shared Rides</small>
+      </div>
+      <div class="col-4 border-start border-light-subtle">
+        <h4 class="fw-bold mb-1 text-primary">₹45k</h4>
+        <small class="text-secondary text-uppercase font-monospace" style="font-size: 0.75rem;">Commute Savings</small>
+      </div>
+    </div>
   </div>
-
-  <div class="splash-buttons">
-    <a href="{% url 'login' %}" class="btn btn-cta btn-lg btn-block" id="splash-login-btn">Sign In</a>
-    <a href="{% url 'signup' %}" class="btn btn-outline btn-lg btn-block" style="border-color:rgba(255,255,255,0.3);color:white;" id="splash-signup-btn">Create Account</a>
+  
+  <div class="col-lg-6 text-center">
+    <!-- Visual graphic / illustration placeholder using styled HTML shapes since images can be absent -->
+    <div class="position-relative d-inline-block p-4">
+      <div class="bg-white rounded-5 shadow-lg p-4 text-start position-relative z-2" style="max-width: 450px; border: 1px solid var(--color-border);">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+          <div class="d-flex align-items-center gap-2">
+            <div class="bg-teal-light text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+              <i class="fa-solid fa-map-location-dot"></i>
+            </div>
+            <div>
+              <div class="fw-bold text-dark mb-0">Active Commutes</div>
+              <small class="text-muted">7 rides departing in 15 mins</small>
+            </div>
+          </div>
+          <span class="badge badge-pill-custom bg-teal-light px-3 py-1">HQ Campus</span>
+        </div>
+        
+        <!-- Journey visualization card -->
+        <div class="border rounded-4 p-3 mb-3 bg-light-subtle">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="text-muted small"><i class="fa-solid fa-clock me-1"></i> Today, 05:15 PM</span>
+            <span class="fw-bold text-accent">$4.50</span>
+          </div>
+          <div class="position-relative ps-4 py-2">
+            <!-- Route line -->
+            <div class="position-absolute start-0 top-0 bottom-0 border-start border-dashed border-primary" style="margin-left: 7px; border-style: dashed !important; border-width: 2px;"></div>
+            <!-- Pickup point icon -->
+            <div class="position-absolute start-0 top-0 bg-accent rounded-circle" style="width: 14px; height: 14px; border: 3px solid white; transform: translateX(-3px) translateY(4px);"></div>
+            <!-- Destination point icon -->
+            <div class="position-absolute start-0 bottom-0 bg-primary rounded-circle" style="width: 14px; height: 14px; border: 3px solid white; transform: translateX(-3px) translateY(-4px);"></div>
+            
+            <div class="mb-3">
+              <div class="fw-bold text-dark text-truncate" style="font-size: 0.9rem;">Building A Reception</div>
+              <small class="text-muted text-truncate d-block" style="font-size: 0.8rem;">HQ Campus Lobby</small>
+            </div>
+            <div>
+              <div class="fw-bold text-dark text-truncate" style="font-size: 0.9rem;">Sunset Avenue Plaza</div>
+              <small class="text-muted text-truncate d-block" style="font-size: 0.8rem;">Metro Station Parking</small>
+            </div>
+          </div>
+        </div>
+        
+        <div class="d-flex align-items-center justify-content-between bg-teal-light p-3 rounded-4">
+          <div class="d-flex align-items-center gap-2">
+            <div class="bg-white rounded-circle d-flex align-items-center justify-content-center fw-bold text-primary" style="width: 32px; height: 32px; font-size: 0.8rem;">
+              JD
+            </div>
+            <div>
+              <div class="fw-bold text-dark mb-0" style="font-size: 0.85rem;">John Doe</div>
+              <small class="text-muted" style="font-size: 0.75rem;">Engineering Manager • Toyota Prius</small>
+            </div>
+          </div>
+          <div class="d-flex gap-1 text-warning">
+            <i class="fa-solid fa-star" style="font-size: 0.8rem;"></i>
+            <i class="fa-solid fa-star" style="font-size: 0.8rem;"></i>
+            <i class="fa-solid fa-star" style="font-size: 0.8rem;"></i>
+            <i class="fa-solid fa-star" style="font-size: 0.8rem;"></i>
+            <i class="fa-solid fa-star" style="font-size: 0.8rem;"></i>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Back decorative blobs to enhance premium visual design -->
+      <div class="position-absolute top-0 start-0 bg-accent opacity-10 rounded-circle" style="width: 250px; height: 250px; transform: translate(-20%, -20%) blur(40px); filter: blur(40px); z-index: 1;"></div>
+      <div class="position-absolute bottom-0 end-0 bg-primary opacity-10 rounded-circle" style="width: 250px; height: 250px; transform: translate(20%, 20%) blur(40px); filter: blur(40px); z-index: 1;"></div>
+    </div>
   </div>
-
-  <p style="color:rgba(255,255,255,0.3);font-size:0.75rem;text-align:center;">
-    Sign up with your company email to join your organization
-  </p>
 </div>
-</body>
-</html>
+{% endblock %}

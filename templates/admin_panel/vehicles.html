@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Vehicles — CommuteSync{% endblock %}
+
+{% block content %}
+<div class="row">
+  <!-- Sidebar Nav Column -->
+  <div class="col-md-3 mb-4">
+    <div class="card card-premium p-0 border-0 bg-white overflow-hidden shadow-sm">
+      <div class="list-group list-group-flush">
+        <a href="{% url 'admin_dashboard' %}" class="list-group-item list-group-item-action py-3 fw-semibold text-secondary border-0 border-start border-transparent border-4">
+          <i class="fa-solid fa-gauge-high me-2"></i> Overview KPI
+        </a>
+        <a href="{% url 'admin_employees' %}" class="list-group-item list-group-item-action py-3 fw-semibold text-secondary border-0 border-start border-transparent border-4">
+          <i class="fa-solid fa-users me-2"></i> Employee Accounts
+        </a>
+        <a href="{% url 'admin_vehicles' %}" class="list-group-item list-group-item-action py-3 fw-semibold text-primary active bg-light border-0 border-start border-primary border-4">
+          <i class="fa-solid fa-car me-2"></i> Registered Vehicles
+        </a>
+        <a href="{% url 'admin_config' %}" class="list-group-item list-group-item-action py-3 fw-semibold text-secondary border-0 border-start border-transparent border-4">
+          <i class="fa-solid fa-gears me-2"></i> System Configuration
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vehicles Table Content -->
+  <div class="col-md-9">
+    <div class="card card-premium p-4 border-0 bg-white shadow-sm">
+      <h4 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-car me-2"></i>Registered Vehicles</h4>
+      
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Owner</th>
+              <th>Make / Model</th>
+              <th>Color</th>
+              <th>License Plate</th>
+              <th>Capacity</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for v in vehicles %}
+              <tr>
+                <td class="fw-bold text-dark">{{ v.owner.username }}</td>
+                <td>{{ v.make }} {{ v.model }}</td>
+                <td>{{ v.color }}</td>
+                <td><span class="font-monospace fw-bold text-primary">{{ v.license_plate }}</span></td>
+                <td>{{ v.capacity }} Seats</td>
+                <td>
+                  <span class="badge {% if v.is_active %}bg-success-subtle text-success{% else %}bg-danger-subtle text-danger{% endif %}">
+                    {% if v.is_active %}Active{% else %}Removed{% endif %}
+                  </span>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

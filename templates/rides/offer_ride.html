@@ -1,89 +1,549 @@
-{% extends "base.html" %}
-{% block title %}Offer a Ride{% endblock %}
+{% extends 'base.html' %}
+
+{% block title %}Offer a Ride — CommuteSync{% endblock %}
+
+{% block extra_head %}
+<style>
+  .search-results-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div>
-    <a href="{% url 'employee_dashboard' %}" style="font-size:0.875rem;color:#888;">← Dashboard</a>
-    <h1 style="margin-top:4px;">Offer a Ride</h1>
+<div class="row mb-4">
+  <div class="col-12 text-center text-md-start">
+    <h2 class="fw-bold mb-1 text-primary"><i class="fa-solid fa-circle-plus me-2"></i>Publish a Commute Ride</h2>
+    <p class="text-secondary mb-0">Help split commute costs by listing your empty car seats</p>
   </div>
 </div>
 
-<div class="page-body" style="max-width:600px;">
-  <div class="card">
-    <div class="card-body">
-      <form method="post" id="offer-ride-form">
+<div class="row g-4" x-data="ridePlanner()">
+  <!-- Form Panel -->
+  <div class="col-lg-5">
+    <div class="card card-premium p-4 shadow-sm border-0">
+      <form method="post" action="{% url 'offer_confirm' %}" @submit="validateForm($event)">
         {% csrf_token %}
-
-        <!-- Route section -->
-        <div style="margin-bottom:24px;">
-          <div style="font-weight:700;font-family:var(--font-display);margin-bottom:16px;font-size:0.95rem;text-transform:uppercase;letter-spacing:0.05em;color:#888;">Route</div>
-
-          <div class="form-group">
-            <label class="form-label">Pickup Location</label>
-            {{ form.pickup_label }}
-            {{ form.pickup_lat }}
-            {{ form.pickup_lng }}
-            {% if form.pickup_label.errors %}<div class="form-error">{{ form.pickup_label.errors.0 }}</div>{% endif %}
+        
+        <!-- Step 1: Location Setup -->
+        <h5 class="fw-bold mb-3 text-primary"><span class="badge bg-teal-light text-primary me-2">1</span>Select Commute Route</h5>
+        
+        <!-- Start Location (Pickup) -->
+        <div class="mb-3 position-relative">
+          <label class="form-label fw-semibold text-secondary small">Start Location (Pickup)</label>
+          <div class="input-group">
+            <span class="input-group-text bg-light border-light-subtle rounded-start-4">
+              <i class="fa-solid fa-location-dot text-accent" style="color: var(--color-accent) !important;"></i>
+            </span>
+            <input type="text" name="start_point_name" required class="form-control" placeholder="Type location or select on map..." id="id_start_point_name"
+                   x-model="startQuery" @input.debounce.300ms="searchLocations(startQuery, 'start')" @focus="showStartSuggestions = true">
+            <button x-show="startQuery" class="btn btn-outline-secondary border-light-subtle border-start-0 border-end-0" type="button" @click="clearField('start')" title="Clear">
+              <i class="fa-solid fa-xmark text-secondary"></i>
+            </button>
+            <button class="btn btn-outline-primary-custom rounded-end-4 border-light-subtle" type="button" @click="detectLocation('start')" title="Use Current GPS Location">
+              <i class="fa-solid fa-crosshairs"></i>
+            </button>
           </div>
+          {{ form.start_lat }}
+          {{ form.start_lng }}
+          
+          <!-- Start Autocomplete Dropdown -->
+          <ul class="list-group position-absolute w-100 shadow-lg" x-show="showStartSuggestions && startSuggestions.length > 0" 
+              @click.away="showStartSuggestions = false" style="z-index: 1050; top: 100%;">
+            <template x-for="item in startSuggestions" :key="item.place_id">
+              <button type="button" class="list-group-item list-group-item-action text-start small py-2" @click="selectSuggestion(item, 'start')">
+                <i class="fa-solid fa-location-dot text-muted me-2"></i><span x-text="item.display_name"></span>
+              </button>
+            </template>
+          </ul>
+          
+          <div class="form-text small text-muted">Type location, click map, or use current position.</div>
+        </div>
 
-          <div class="form-group">
-            <label class="form-label">Destination</label>
-            {{ form.destination_label }}
-            {{ form.destination_lat }}
-            {{ form.destination_lng }}
-            {% if form.destination_label.errors %}<div class="form-error">{{ form.destination_label.errors.0 }}</div>{% endif %}
+        <!-- End Location (Destination) -->
+        <div class="mb-3 position-relative">
+          <label class="form-label fw-semibold text-secondary small">End Location (Destination)</label>
+          <div class="input-group">
+            <span class="input-group-text bg-light border-light-subtle rounded-start-4">
+              <i class="fa-solid fa-location-pin text-primary"></i>
+            </span>
+            <input type="text" name="end_point_name" required class="form-control" placeholder="Type location or select on map..." id="id_end_point_name"
+                   x-model="endQuery" @input.debounce.300ms="searchLocations(endQuery, 'end')" @focus="showEndSuggestions = true">
+            <button x-show="endQuery" class="btn btn-outline-secondary border-light-subtle border-start-0 border-end-0" type="button" @click="clearField('end')" title="Clear">
+              <i class="fa-solid fa-xmark text-secondary"></i>
+            </button>
+            <button class="btn btn-outline-primary-custom rounded-end-4 border-light-subtle" type="button" @click="detectLocation('end')" title="Use Current GPS Location">
+              <i class="fa-solid fa-crosshairs"></i>
+            </button>
+          </div>
+          {{ form.end_lat }}
+          {{ form.end_lng }}
+          
+          <!-- End Autocomplete Dropdown -->
+          <ul class="list-group position-absolute w-100 shadow-lg" x-show="showEndSuggestions && endSuggestions.length > 0" 
+              @click.away="showEndSuggestions = false" style="z-index: 1050; top: 100%;">
+            <template x-for="item in endSuggestions" :key="item.place_id">
+              <button type="button" class="list-group-item list-group-item-action text-start small py-2" @click="selectSuggestion(item, 'end')">
+                <i class="fa-solid fa-location-pin text-muted me-2"></i><span x-text="item.display_name"></span>
+              </button>
+            </template>
+          </ul>
+          
+          <div class="form-text small text-muted">Type location, click map, or use current position.</div>
+        </div>
+
+        <!-- Quick Saved Places -->
+        {% if saved_places %}
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-secondary small">Use Saved Places</label>
+            <div class="d-flex flex-wrap gap-2">
+              {% for place in saved_places %}
+                <button type="button" class="btn btn-sm btn-outline-primary-custom px-3 py-1 rounded-pill small" 
+                        @click="useSavedPlace('{{ place.name }}', {{ place.latitude }}, {{ place.longitude }})">
+                  <i class="fa-solid fa-bookmark me-1"></i> {{ place.name }}
+                </button>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        <hr class="my-4 border-light-subtle">
+
+        <!-- Step 2: Trip Parameters -->
+        <h5 class="fw-bold mb-3 text-primary"><span class="badge bg-teal-light text-primary me-2">2</span>Ride Details</h5>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold text-secondary small">Select Vehicle</label>
+          <select name="vehicle" required class="form-select" id="id_vehicle">
+            <option value="" disabled selected>-- Select Vehicle --</option>
+            {% for v in vehicles %}
+              <option value="{{ v.id }}" data-capacity="{{ v.capacity }}" {% if form.vehicle.value|stringformat:"s" == v.id|stringformat:"s" %}selected{% endif %}>
+                [{{ v.get_vehicle_type_display }}] {{ v.color }} {{ v.make }} {{ v.model }} ({{ v.license_plate }})
+              </option>
+            {% endfor %}
+          </select>
+          {% if form.vehicle.errors %}
+            <div class="text-danger small mt-1">{% for error in form.vehicle.errors %}{{ error }}{% endfor %}</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold text-secondary small">Departure Time</label>
+          {{ form.departure_time }}
+          {% if form.departure_time.errors %}
+            <div class="text-danger small mt-1">{% for error in form.departure_time.errors %}{{ error }}{% endfor %}</div>
+          {% endif %}
+        </div>
+
+        <div class="row">
+          <div class="col-6 mb-3">
+            <label class="form-label fw-semibold text-secondary small">Available Seats</label>
+            {{ form.total_seats }}
+            {% if form.total_seats.errors %}
+              <div class="text-danger small mt-1">{% for error in form.total_seats.errors %}{{ error }}{% endfor %}</div>
+            {% endif %}
+          </div>
+          <div class="col-6 mb-3">
+            <label class="form-label fw-semibold text-secondary small">Price per KM ($)</label>
+            <input type="number" name="price_per_km" class="form-control" step="0.01" value="0.40" id="id_price_per_km" x-model="pricePerKm">
+            {% if form.price_per_km.errors %}
+              <div class="text-danger small mt-1">{% for error in form.price_per_km.errors %}{{ error }}{% endfor %}</div>
+            {% endif %}
           </div>
         </div>
 
-        <hr class="divider-dashed">
-
-        <!-- Schedule -->
-        <div style="margin-bottom:24px;margin-top:24px;">
-          <div style="font-weight:700;font-family:var(--font-display);margin-bottom:16px;font-size:0.95rem;text-transform:uppercase;letter-spacing:0.05em;color:#888;">Schedule</div>
-          <div class="form-group">
-            <label class="form-label">Departure Date & Time</label>
-            {{ form.departure_datetime }}
-            {% if form.departure_datetime.errors %}<div class="form-error">{{ form.departure_datetime.errors.0 }}</div>{% endif %}
+        <!-- Route Estimation Banner -->
+        <div class="p-3 bg-teal-light rounded-4 mb-4 d-none" :class="{'d-block': distance > 0}">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="fw-semibold text-primary"><i class="fa-solid fa-route me-1"></i> Distance:</span>
+            <span class="fw-bold text-dark" x-text="distance + ' km'"></span>
           </div>
-          <div class="form-group">
-            <label class="form-label">Recurring?</label>
-            <div class="form-check">
-              {{ form.is_recurring }}
-              <span style="font-size:0.9rem;">Repeat for next 5 weekdays</span>
-            </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span class="fw-semibold text-primary"><i class="fa-solid fa-clock me-1"></i> Est. Duration:</span>
+            <span class="fw-bold text-dark" x-text="duration + ' mins'"></span>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span class="fw-semibold text-primary"><i class="fa-solid fa-hand-holding-dollar me-1"></i> Est. Full Seat Fare:</span>
+            <span class="fw-bold text-accent" x-text="'$' + estFare.toFixed(2)"></span>
           </div>
         </div>
 
-        <hr class="divider-dashed">
-
-        <!-- Ride details -->
-        <div style="margin-bottom:24px;margin-top:24px;">
-          <div style="font-weight:700;font-family:var(--font-display);margin-bottom:16px;font-size:0.95rem;text-transform:uppercase;letter-spacing:0.05em;color:#888;">Ride Details</div>
-          <div class="grid-2" style="gap:16px;">
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label">Seats Available</label>
-              {{ form.seats_total }}
-              {% if form.seats_total.errors %}<div class="form-error">{{ form.seats_total.errors.0 }}</div>{% endif %}
-            </div>
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label">Fare per Seat (₹)</label>
-              {{ form.fare_per_seat }}
-              {% if form.fare_per_seat.errors %}<div class="form-error">{{ form.fare_per_seat.errors.0 }}</div>{% endif %}
-            </div>
-          </div>
-          <div class="form-group" style="margin-top:16px;">
-            <label class="form-label">Vehicle</label>
-            {{ form.vehicle }}
-            {% if form.vehicle.errors %}<div class="form-error">{{ form.vehicle.errors.0 }}</div>{% endif %}
-          </div>
-        </div>
-
-        <button type="submit" class="btn btn-cta btn-lg btn-block" id="offer-ride-submit-btn">
-          Preview Route →
+        <button type="submit" class="btn btn-accent-custom w-100 py-3 rounded-4 shadow-sm">
+          <i class="fa-solid fa-paper-plane me-2"></i> Confirm & Publish Ride
         </button>
       </form>
     </div>
   </div>
+
+  <!-- Map Panel -->
+  <div class="col-lg-7">
+    <div class="card card-premium p-3 shadow-sm border-0 h-100">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <h5 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-map-location-dot me-2"></i>Route Preview</h5>
+        <span class="text-secondary small">Click map to set Pickup (1st) and Destination (2nd)</span>
+      </div>
+      <div id="offer-map" class="map-container" style="height: 520px; z-index: 10;"></div>
+      <div class="d-flex justify-content-between mt-2 small text-secondary">
+        <span><i class="fa-solid fa-circle text-accent"></i> Start (Coral Pin)</span>
+        <span><i class="fa-solid fa-circle text-primary"></i> Destination (Teal Pin)</span>
+        <button type="button" class="btn btn-link text-primary text-decoration-none p-0 small fw-bold" @click="resetPins()">
+          <i class="fa-solid fa-rotate-left"></i> Reset Pins
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function ridePlanner() {
+    return {
+      map: null,
+      startMarker: null,
+      endMarker: null,
+      routeLine: null,
+      distance: 0,
+      duration: 0,
+      
+      startQuery: '',
+      endQuery: '',
+      startSuggestions: [],
+      endSuggestions: [],
+      showStartSuggestions: false,
+      pricePerKm: 0.40,
+      get estFare() {
+        return Math.round(this.distance * this.pricePerKm * 100) / 100;
+      },
+      
+      init() {
+        this.map = L.map('offer-map').setView([23.0225, 72.5714], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(this.map);
+
+        this.map.on('click', (e) => {
+          this.handleMapClick(e.latlng.lat, e.latlng.lng);
+        });
+      },
+
+      searchLocations(query, field) {
+        // Clear coordinate values as the query is modified
+        const latEl = document.getElementById(field + '_lat') || document.getElementById('id_' + field + '_lat');
+        const lngEl = document.getElementById(field + '_lng') || document.getElementById('id_' + field + '_lng');
+        if (latEl) latEl.value = '';
+        if (lngEl) lngEl.value = '';
+
+        if (!query || query.length < 3) {
+          if (field === 'start') this.startSuggestions = [];
+          else this.endSuggestions = [];
+          return;
+        }
+        
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`, {
+          headers: { 'Accept-Language': 'en' }
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (field === 'start') {
+              this.startSuggestions = data;
+              this.showStartSuggestions = true;
+            } else {
+              this.endSuggestions = data;
+              this.showEndSuggestions = true;
+            }
+          })
+          .catch(err => console.error("Autocomplete fetch failed", err));
+      },
+
+      selectSuggestion(item, field) {
+        const lat = parseFloat(item.lat);
+        const lng = parseFloat(item.lon);
+        const cleanName = item.display_name.split(',').slice(0, 3).join(',');
+
+        if (field === 'start') {
+          this.setStartPin(lat, lng, cleanName);
+          this.startQuery = cleanName;
+          this.showStartSuggestions = false;
+          this.startSuggestions = [];
+        } else {
+          this.setEndPin(lat, lng, cleanName);
+          this.endQuery = cleanName;
+          this.showEndSuggestions = false;
+          this.endSuggestions = [];
+        }
+        
+        this.map.setView([lat, lng], 13);
+        if (this.startMarker && this.endMarker) {
+          this.drawRoute();
+        }
+      },
+
+      reverseGeocode(lat, lng, callback) {
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
+          headers: { 'Accept-Language': 'en' }
+        })
+          .then(res => res.json())
+          .then(data => {
+            const address = data.display_name ? data.display_name.split(',').slice(0, 3).join(',') : `Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+            callback(address);
+          })
+          .catch(err => {
+            console.error("Reverse geocoding failed", err);
+            callback(`Point (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
+          });
+      },
+
+      detectLocation(field) {
+        if (!navigator.geolocation) {
+          alert("Geolocation is not supported by your browser.");
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            
+            this.map.setView([lat, lng], 14);
+            
+            if (field === 'start') {
+              if (this.startMarker) this.map.removeLayer(this.startMarker);
+              this.startMarker = null;
+              this.reverseGeocode(lat, lng, (address) => {
+                this.setStartPin(lat, lng, address);
+                this.startQuery = address;
+                if (this.endMarker) this.drawRoute();
+              });
+            } else {
+              if (this.endMarker) this.map.removeLayer(this.endMarker);
+              this.endMarker = null;
+              this.reverseGeocode(lat, lng, (address) => {
+                this.setEndPin(lat, lng, address);
+                this.endQuery = address;
+                if (this.startMarker) this.drawRoute();
+              });
+            }
+          },
+          (error) => {
+            alert("Error retrieving your location: " + error.message);
+          }
+        );
+      },
+
+      handleMapClick(lat, lng) {
+        if (!this.startMarker) {
+          this.reverseGeocode(lat, lng, (address) => {
+            this.setStartPin(lat, lng, address);
+            this.startQuery = address;
+          });
+        } else if (!this.endMarker) {
+          this.reverseGeocode(lat, lng, (address) => {
+            this.setEndPin(lat, lng, address);
+            this.endQuery = address;
+            this.drawRoute();
+          });
+        }
+      },
+
+      setStartPin(lat, lng, name) {
+        const coralIcon = L.divIcon({
+          className: 'custom-div-icon',
+          html: `<div style="background-color: var(--color-accent); width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
+          iconSize: [14, 14],
+          iconAnchor: [7, 7]
+        });
+
+        if (this.startMarker) this.map.removeLayer(this.startMarker);
+
+        this.startMarker = L.marker([lat, lng], {icon: coralIcon}).addTo(this.map)
+          .bindPopup(name).openPopup();
+        
+        const startLatEl = document.getElementById('start_lat') || document.getElementById('id_start_lat');
+        const startLngEl = document.getElementById('start_lng') || document.getElementById('id_start_lng');
+        if (startLatEl) startLatEl.value = lat.toFixed(6);
+        if (startLngEl) startLngEl.value = lng.toFixed(6);
+      },
+
+      setEndPin(lat, lng, name) {
+        const tealIcon = L.divIcon({
+          className: 'custom-div-icon',
+          html: `<div style="background-color: var(--color-primary); width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
+          iconSize: [14, 14],
+          iconAnchor: [7, 7]
+        });
+
+        if (this.endMarker) this.map.removeLayer(this.endMarker);
+
+        this.endMarker = L.marker([lat, lng], {icon: tealIcon}).addTo(this.map)
+          .bindPopup(name).openPopup();
+        
+        const endLatEl = document.getElementById('end_lat') || document.getElementById('id_end_lat');
+        const endLngEl = document.getElementById('end_lng') || document.getElementById('id_end_lng');
+        if (endLatEl) endLatEl.value = lat.toFixed(6);
+        if (endLngEl) endLngEl.value = lng.toFixed(6);
+      },
+
+      useSavedPlace(name, lat, lng) {
+        if (!this.startMarker) {
+          this.setStartPin(lat, lng, name);
+          this.startQuery = name;
+          this.map.panTo([lat, lng]);
+        } else if (!this.endMarker) {
+          this.setEndPin(lat, lng, name);
+          this.endQuery = name;
+          this.drawRoute();
+          this.map.panTo([lat, lng]);
+        }
+      },
+
+      clearField(field) {
+        if (field === 'start') {
+          if (this.startMarker) this.map.removeLayer(this.startMarker);
+          this.startMarker = null;
+          this.startQuery = '';
+          const startLatEl = document.getElementById('start_lat') || document.getElementById('id_start_lat');
+          const startLngEl = document.getElementById('start_lng') || document.getElementById('id_start_lng');
+          if (startLatEl) startLatEl.value = '';
+          if (startLngEl) startLngEl.value = '';
+        } else {
+          if (this.endMarker) this.map.removeLayer(this.endMarker);
+          this.endMarker = null;
+          this.endQuery = '';
+          const endLatEl = document.getElementById('end_lat') || document.getElementById('id_end_lat');
+          const endLngEl = document.getElementById('end_lng') || document.getElementById('id_end_lng');
+          if (endLatEl) endLatEl.value = '';
+          if (endLngEl) endLngEl.value = '';
+        }
+        
+        if (this.routeLine) {
+          this.map.removeLayer(this.routeLine);
+          this.routeLine = null;
+        }
+        this.distance = 0;
+        this.duration = 0;
+      },
+
+      drawRoute() {
+        if (!this.startMarker || !this.endMarker) return;
+        
+        const p1 = this.startMarker.getLatLng();
+        const p2 = this.endMarker.getLatLng();
+        
+        if (this.routeLine) {
+          this.map.removeLayer(this.routeLine);
+        }
+        
+        this.routeLine = L.polyline([p1, p2], {
+          color: 'var(--color-primary)', 
+          weight: 4,
+          dashArray: '5, 8'
+        }).addTo(this.map);
+        
+        this.map.fitBounds(this.routeLine.getBounds(), {padding: [50, 50]});
+
+        // Calculate distance and duration using formulas
+        const lat1 = p1.lat;
+        const lon1 = p1.lng;
+        const lat2 = p2.lat;
+        const lon2 = p2.lng;
+        
+        const R = 6371; // km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        this.distance = Math.round(R * c * 100) / 100;
+        this.duration = Math.round(this.distance * 2); // 2 mins per km
+      },
+
+      resetPins() {
+        this.clearField('start');
+        this.clearField('end');
+      },
+
+      async validateForm(e) {
+        e.preventDefault();
+        
+        const getElVal = (id) => {
+          const el = document.getElementById(id) || document.getElementById('id_' + id);
+          return el ? el.value : '';
+        };
+
+        let startLat = getElVal('start_lat');
+        let endLat = getElVal('end_lat');
+
+        // Geocode start if empty but text is entered
+        if (!startLat && this.startQuery) {
+          try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this.startQuery)}&limit=1`);
+            const data = await res.json();
+            if (data && data.length > 0) {
+              const lat = parseFloat(data[0].lat);
+              const lng = parseFloat(data[0].lon);
+              this.setStartPin(lat, lng, data[0].display_name);
+              startLat = lat.toFixed(6);
+            }
+          } catch(err) {
+            console.error("Auto geocode start failed", err);
+          }
+        }
+
+        // Geocode end if empty but text is entered
+        if (!endLat && this.endQuery) {
+          try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this.endQuery)}&limit=1`);
+            const data = await res.json();
+            if (data && data.length > 0) {
+              const lat = parseFloat(data[0].lat);
+              const lng = parseFloat(data[0].lon);
+              this.setEndPin(lat, lng, data[0].display_name);
+              endLat = lat.toFixed(6);
+            }
+          } catch(err) {
+            console.error("Auto geocode end failed", err);
+          }
+        }
+
+        if (!startLat || !endLat) {
+          alert('Please click on the map to set pickup and destination pins before publishing.');
+          return;
+        }
+
+        // Submit form programmatically
+        e.target.submit();
+      }
+    };
+  }
+</script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const vehicleSelect = document.getElementById('id_vehicle');
+    const seatsInput = document.getElementById('id_total_seats');
+    
+    if (vehicleSelect && seatsInput) {
+      const updateCapacity = () => {
+        const selectedOption = vehicleSelect.options[vehicleSelect.selectedIndex];
+        if (selectedOption && selectedOption.dataset.capacity) {
+          const cap = selectedOption.dataset.capacity;
+          seatsInput.max = cap;
+          if (!seatsInput.value || parseInt(seatsInput.value) > parseInt(cap)) {
+            seatsInput.value = cap;
+          }
+        }
+      };
+      
+      vehicleSelect.addEventListener('change', updateCapacity);
+      updateCapacity();
+    }
+  });
+</script>
 {% endblock %}

@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block title %}Reports & Analytics — CommuteSync{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col-12 text-center text-md-start">
+    <h2 class="fw-bold mb-1 text-primary"><i class="fa-solid fa-chart-line me-2"></i>My Commute Analytics</h2>
+    <p class="text-secondary mb-0">Review your travel efficiency, cost savings, and ecological impact history</p>
+  </div>
+</div>
+
+<!-- KPI Cards Row -->
+<div class="row g-4 mb-5">
+  <!-- Total Trips -->
+  <div class="col-md-6 col-lg-3">
+    <div class="card card-premium p-3 border-0 shadow-sm bg-white">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <span class="text-secondary small fw-semibold text-uppercase font-monospace">Total Trips</span>
+        <div class="bg-teal-light text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+          <i class="fa-solid fa-route"></i>
+        </div>
+      </div>
+      <h2 class="fw-bold mb-0 text-dark">{{ total_trips }}</h2>
+      <small class="text-secondary">Shared rides completed</small>
+    </div>
+  </div>
+
+  <!-- Total Distance -->
+  <div class="col-md-6 col-lg-3">
+    <div class="card card-premium p-3 border-0 shadow-sm bg-white">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <span class="text-secondary small fw-semibold text-uppercase font-monospace">Total Distance</span>
+        <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background-color: var(--color-primary-light);">
+          <i class="fa-solid fa-road"></i>
+        </div>
+      </div>
+      <h2 class="fw-bold mb-0 text-dark">{{ total_distance }} km</h2>
+      <small class="text-secondary">Saves campus commutes</small>
+    </div>
+  </div>
+
+  <!-- Fuel Saved -->
+  <div class="col-md-6 col-lg-3">
+    <div class="card card-premium p-3 border-0 shadow-sm bg-white" style="border-bottom: 4px solid var(--color-success) !important;">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <span class="text-secondary small fw-semibold text-uppercase font-monospace">Fuel Saved</span>
+        <div class="bg-success-subtle text-success rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background-color: #E8F5E9;">
+          <i class="fa-solid fa-leaf"></i>
+        </div>
+      </div>
+      <h2 class="fw-bold mb-0 text-success">{{ fuel_saved }} L</h2>
+      <small class="text-muted">Offset: <strong class="text-dark">{{ co2_offset }} kg CO2</strong></small>
+    </div>
+  </div>
+
+  <!-- Net Earnings/Spent -->
+  <div class="col-md-6 col-lg-3">
+    <div class="card card-premium p-3 border-0 shadow-sm bg-white">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <span class="text-secondary small fw-semibold text-uppercase font-monospace">Wallet Ledger Summary</span>
+        <div class="bg-wallet-light text-wallet rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+          <i class="fa-solid fa-sack-dollar"></i>
+        </div>
+      </div>
+      <h2 class="fw-bold mb-0 text-dark">₹{{ total_earned }}</h2>
+      <small class="text-secondary">Spent: <strong class="text-danger">₹{{ total_spent }}</strong></small>
+    </div>
+  </div>
+</div>
+
+<!-- Graphs Section -->
+<div class="row g-4">
+  <!-- Bar Chart: Commutes per Month -->
+  <div class="col-md-6">
+    <div class="card card-premium p-4 border-0 shadow-sm bg-white">
+      <h5 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-chart-bar me-2"></i>Commutes Activity Log</h5>
+      <div style="height: 320px; position: relative;">
+        <canvas id="tripsChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Line Chart: Expense Trend -->
+  <div class="col-md-6">
+    <div class="card card-premium p-4 border-0 shadow-sm bg-white">
+      <h5 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-chart-line me-2"></i>Commuting Expense Trend</h5>
+      <div style="height: 320px; position: relative;">
+        <canvas id="costChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Shared parameters loaded from backend context
+    const months = JSON.parse('["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"]');
+    const tripsData = {{ chart_trips_data|safe }};
+    const costData = {{ chart_cost_data|safe }};
+
+    // Style helper values matching design colors
+    const tealColor = '#0F6B66';
+    const coralColor = '#FF8B5E';
+
+    // 1. Activity Bar Chart
+    const ctxTrips = document.getElementById('tripsChart').getContext('2d');
+    new Chart(ctxTrips, {
+      type: 'bar',
+      data: {
+        labels: months,
+        datasets: [{
+          label: 'Total Commutes',
+          data: tripsData,
+          backgroundColor: tealColor + 'dd', // Add alpha transparency
+          borderColor: tealColor,
+          borderWidth: 1,
+          borderRadius: 8,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: '#E8E2D8' }
+          },
+          x: {
+            grid: { display: false }
+          }
+        }
+      }
+    });
+
+    // 2. Expense Line Chart
+    const ctxCost = document.getElementById('costChart').getContext('2d');
+    new Chart(ctxCost, {
+      type: 'line',
+      data: {
+        labels: months,
+        datasets: [{
+          label: 'Spent Amount (₹)',
+          data: costData,
+          backgroundColor: 'transparent',
+          borderColor: coralColor,
+          borderWidth: 3,
+          tension: 0.3,
+          pointBackgroundColor: coralColor,
+          pointRadius: 4,
+          fill: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: '#E8E2D8' }
+          },
+          x: {
+            grid: { display: false }
+          }
+        }
+      }
+    });
+  });
+</script>
+{% endblock %}

@@ -1,52 +1,251 @@
-{% extends "base.html" %}
-{% block title %}Wallet{% endblock %}
+{% extends 'base.html' %}
+
+{% block title %}My Wallet — CommuteSync{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1>Wallet</h1>
+<div class="row mb-4">
+  <div class="col-12 text-center text-md-start">
+    <h2 class="fw-bold mb-1 text-primary"><i class="fa-solid fa-wallet me-2"></i>My Commute Wallet</h2>
+    <p class="text-secondary mb-0">Manage your balance and track commute transaction history</p>
+  </div>
 </div>
-<div class="page-body" style="max-width:560px;">
 
-  <!-- Balance card -->
-  <div class="card mb-6" style="background:var(--transit-blue);border-color:var(--transit-blue);">
-    <div class="card-body" style="text-align:center;padding:40px;">
-      <div style="font-size:0.875rem;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Wallet Balance</div>
-      <div class="mono" style="font-size:3.5rem;font-weight:700;color:var(--route-amber);">₹{{ wallet.balance }}</div>
-      <form method="post" action="{% url 'wallet_recharge' %}" style="margin-top:24px;display:flex;gap:12px;justify-content:center;">
+<div class="row g-4">
+  <!-- Wallet Balance & Recharge Card -->
+  <div class="col-md-5">
+    <div class="card card-premium shadow-sm border-0 mb-4 text-white overflow-hidden position-relative" style="background-color: var(--color-wallet) !important; border: none !important;">
+      <!-- Glowing Background Blur elements -->
+      <div class="position-absolute bg-white opacity-10 rounded-circle" style="width: 200px; height: 200px; right: -50px; top: -50px; z-index: 1;"></div>
+      <div class="position-absolute bg-dark opacity-10 rounded-circle" style="width: 150px; height: 150px; left: -50px; bottom: -50px; z-index: 1;"></div>
+      
+      <div class="card-body p-4 position-relative z-2">
+        <span class="small opacity-80 text-uppercase tracking-wider">Current Balance</span>
+        <h1 class="display-4 fw-bold mb-3 mt-1">₹{{ user.wallet_balance|floatformat:2 }}</h1>
+        
+        <div class="d-flex align-items-center gap-2 small opacity-90">
+          <i class="fa-solid fa-circle-check"></i>
+          <span>Securely linked to Enterprise ID</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recharge Form -->
+    <div class="card card-premium p-4 shadow-sm border-0">
+      <h5 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-circle-plus me-1"></i>Recharge Wallet</h5>
+      
+      <form id="recharge-init-form" x-data="walletRecharge()" @submit.prevent="initRecharge">
         {% csrf_token %}
-        <input type="number" name="amount" placeholder="Enter amount" min="10" step="10"
-               class="form-control" style="max-width:160px;background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);color:white;">
-        <button type="submit" class="btn btn-cta" id="recharge-wallet-btn">Top Up</button>
+        
+        {% if form.amount.errors %}
+          <div class="text-danger small mb-2">{% for error in form.amount.errors %}{{ error }}{% endfor %}</div>
+        {% endif %}
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold text-secondary small">Recharge Amount (₹)</label>
+          <input type="number" name="amount" class="form-control" placeholder="Enter amount (₹)" min="5.00" step="0.01" required x-model="rechargeAmount" id="id_amount">
+        </div>
+
+        <!-- Quick Select Buttons -->
+        <div class="mb-4">
+          <span class="form-label fw-semibold text-secondary d-block small mb-2">Quick Add</span>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm px-3 rounded-pill transition-all" :class="quickAmount === 100 ? 'btn-primary-custom text-white' : 'btn-outline-primary-custom'" @click="quickAmount = 100; rechargeAmount = 100">+₹100</button>
+            <button type="button" class="btn btn-sm px-3 rounded-pill transition-all" :class="quickAmount === 250 ? 'btn-primary-custom text-white' : 'btn-outline-primary-custom'" @click="quickAmount = 250; rechargeAmount = 250">+₹250</button>
+            <button type="button" class="btn btn-sm px-3 rounded-pill transition-all" :class="quickAmount === 500 ? 'btn-primary-custom text-white' : 'btn-outline-primary-custom'" @click="quickAmount = 500; rechargeAmount = 500">+₹500</button>
+            <button type="button" class="btn btn-sm px-3 rounded-pill transition-all" :class="quickAmount === 1000 ? 'btn-primary-custom text-white' : 'btn-outline-primary-custom'" @click="quickAmount = 1000; rechargeAmount = 1000">+₹1000</button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary-custom w-100 py-3 rounded-4 shadow-sm" style="background-color: var(--color-wallet) !important; border-color: var(--color-wallet) !important;">
+          <i class="fa-solid fa-credit-card me-2"></i> Recharge Now
+        </button>
       </form>
     </div>
   </div>
 
-  <!-- Transaction history -->
-  <div class="card">
-    <div class="card-header flex justify-between items-center">
-      <h2>Transactions</h2>
-      <span class="badge badge-booked">Last 20</span>
-    </div>
-    {% if transactions %}
-    <div>
-      {% for txn in transactions %}
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 24px;border-bottom:1px solid var(--line-grey);">
-        <div>
-          <div style="font-weight:600;font-size:0.9rem;">{{ txn.reason }}</div>
-          <div class="mono" style="font-size:0.75rem;color:#888;">{{ txn.created_at|date:"d M Y, H:i" }}</div>
-        </div>
-        <div class="mono" style="font-weight:700;font-size:1rem;color:{% if txn.type == 'CREDIT' %}var(--eco-teal){% else %}var(--alert-rust){% endif %};">
-          {% if txn.type == 'CREDIT' %}+{% else %}−{% endif %}₹{{ txn.amount }}
-        </div>
+  <!-- Transaction History List -->
+  <div class="col-md-7">
+    <div class="card card-premium shadow-sm border-0 h-100 bg-white">
+      <div class="card-header bg-white border-bottom py-3 px-4">
+        <h5 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-list-check me-2"></i>Transaction Ledger</h5>
       </div>
-      {% endfor %}
+      <div class="card-body p-4" style="max-height: 520px; overflow-y: auto;">
+        {% if transactions %}
+          <div class="d-flex flex-column gap-3">
+            {% for tx in transactions %}
+              <div class="d-flex justify-content-between align-items-center p-3 border rounded-4 hover-shadow bg-white">
+                <div class="d-flex align-items-center gap-3">
+                  <!-- Type Icon -->
+                  <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold" 
+                       style="width: 40px; height: 40px; 
+                              {% if tx.transaction_type == 'RECHARGE' %}background-color: var(--color-wallet-light); color: var(--color-wallet);
+                              {% elif tx.transaction_type == 'EARNED' %}background-color: #E8F5E9; color: var(--color-success);
+                              {% else %}background-color: #FFEBEE; color: var(--color-error);{% endif %}">
+                    {% if tx.transaction_type == 'RECHARGE' %}<i class="fa-solid fa-arrow-down-long"></i>
+                    {% elif tx.transaction_type == 'EARNED' %}<i class="fa-solid fa-coins"></i>
+                    {% else %}<i class="fa-solid fa-arrow-up-long"></i>{% endif %}
+                  </div>
+                  <div>
+                    <h6 class="fw-bold text-dark mb-0" style="font-size: 0.9rem;">{{ tx.get_transaction_type_display }}</h6>
+                    <small class="text-secondary" style="font-size: 0.75rem;">
+                      {{ tx.timestamp|date:"M d, h:i A" }} 
+                      {% if tx.trip %}
+                        &bull; Booking <a href="{% url 'trip_detail' tx.trip.id %}" class="text-decoration-none fw-bold text-primary">#{{ tx.trip.id }}</a>
+                      {% endif %}
+                    </small>
+                  </div>
+                </div>
+                
+                <!-- Amount Indicator -->
+                <div class="text-end">
+                  <span class="fw-bold {% if tx.amount > 0 %}text-success{% else %}text-danger{% endif %}" style="font-size: 1.1rem;">
+                    {% if tx.amount > 0 %}+{% endif %}₹{{ tx.amount|floatformat:2 }}
+                  </span>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-center py-5">
+            <div class="opacity-20 mb-3 text-secondary" style="font-size: 3rem;">
+              <i class="fa-solid fa-receipt"></i>
+            </div>
+            <p class="text-secondary mb-0">No ledger transactions recorded yet.</p>
+          </div>
+        {% endif %}
+      </div>
     </div>
-    {% else %}
-    <div class="empty-state" style="padding:40px;">
-      <p>No transactions yet. Top up to get started.</p>
-    </div>
-    {% endif %}
   </div>
-
 </div>
+
+<!-- Mock Razorpay Modal Backdrop & Dialog -->
+<div id="mock-payment-modal" class="position-fixed top-0 start-0 w-100 h-100 d-none justify-content-center align-items-center" style="background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); z-index: 2000;">
+  <div class="card card-premium p-4 shadow-lg border-0 bg-white text-center animate-fade-in" style="max-width: 420px; width: 90%;">
+    <div class="text-primary fs-1 mb-3">
+      <i class="fa-solid fa-credit-card"></i>
+    </div>
+    <h4 class="fw-bold text-dark mb-1">Razorpay Sandbox</h4>
+    <p class="text-secondary small mb-4">Simulate a payment for your wallet recharge</p>
+    
+    <div class="bg-light p-3 rounded-4 border mb-4 text-start">
+      <div class="d-flex justify-content-between mb-2">
+        <span class="text-secondary small">Order ID:</span>
+        <span class="fw-bold text-dark small" id="mock-order-id">order_xxxx</span>
+      </div>
+      <div class="d-flex justify-content-between">
+        <span class="text-secondary small">Amount to Recharge:</span>
+        <span class="fw-bold text-accent" id="mock-amount">₹0.00</span>
+      </div>
+    </div>
+    
+    <form id="recharge-verify-form" method="post" action="{% url 'wallet_recharge_verify' user.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="razorpay_order_id" id="verify_order_id">
+      <input type="hidden" name="razorpay_payment_id" id="verify_payment_id">
+      <input type="hidden" name="razorpay_signature" id="verify_signature">
+      <input type="hidden" name="amount" id="verify_amount">
+      
+      <div class="d-flex flex-column gap-2">
+        <button type="button" class="btn btn-success py-3 rounded-4 shadow-sm fw-bold" onclick="submitMockPayment(true)">
+          <i class="fa-solid fa-circle-check me-2"></i> Simulate Success
+        </button>
+        <button type="button" class="btn btn-outline-danger py-2 rounded-4" onclick="submitMockPayment(false)">
+          <i class="fa-solid fa-circle-xmark me-2"></i> Simulate Failure
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+  function walletRecharge() {
+    return {
+      quickAmount: null,
+      rechargeAmount: '100',
+      async initRecharge() {
+        const amount = this.rechargeAmount;
+        if (!amount || parseFloat(amount) < 5) {
+          alert('Please enter a valid amount (minimum ₹5.00)');
+          return;
+        }
+        
+        const formData = new FormData();
+        formData.append('amount', amount);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        
+        try {
+          const res = await fetch("{% url 'wallet_recharge_init' %}", {
+            method: 'POST',
+            body: formData
+          });
+          const data = await res.json();
+          if (data.error) {
+            alert(data.error);
+            return;
+          }
+          
+          if (data.is_mock) {
+            document.getElementById('verify_order_id').value = data.order_id;
+            document.getElementById('verify_amount').value = data.amount;
+            document.getElementById('mock-order-id').innerText = data.order_id;
+            document.getElementById('mock-amount').innerText = '₹' + data.amount.toFixed(2);
+            
+            const modal = document.getElementById('mock-payment-modal');
+            modal.classList.remove('d-none');
+            modal.classList.add('d-flex');
+          } else {
+            const hostedForm = document.createElement('form');
+            hostedForm.method = 'POST';
+            hostedForm.action = 'https://api.razorpay.com/v1/checkout/hosted';
+            
+            const params = {
+              'key_id': data.key_id,
+              'amount': parseInt(data.amount * 100).toString(),
+              'currency': data.currency,
+              'name': data.org_name,
+              'description': 'Wallet Recharge',
+              'order_id': data.order_id,
+              'prefill[name]': "{{ user.get_full_name|default:user.username }}",
+              'prefill[email]': "{{ user.email }}",
+              'callback_url': data.callback_url,
+              'cancel_url': data.cancel_url
+            };
+            
+            for (const key in params) {
+              const input = document.createElement('input');
+              input.type = 'hidden';
+              input.name = key;
+              input.value = params[key];
+              hostedForm.appendChild(input);
+            }
+            
+            document.body.appendChild(hostedForm);
+            hostedForm.submit();
+          }
+        } catch (err) {
+          console.error('Recharge initialization failed', err);
+          alert('Network error. Failed to initialize payment: ' + err.message);
+        }
+      }
+    };
+  }
+
+  function submitMockPayment(success) {
+    if (success) {
+      const orderId = document.getElementById('verify_order_id').value;
+      // Generate mock credentials
+      document.getElementById('verify_payment_id').value = 'pay_mock_' + Math.random().toString(36).substring(2, 11);
+      document.getElementById('verify_signature').value = 'sig_mock_' + Math.random().toString(36).substring(2, 11);
+      document.getElementById('recharge-verify-form').submit();
+    } else {
+      const modal = document.getElementById('mock-payment-modal');
+      modal.classList.add('d-none');
+      modal.classList.remove('d-flex');
+      alert('Mock payment simulation failed/cancelled.');
+    }
+  }
+</script>
 {% endblock %}

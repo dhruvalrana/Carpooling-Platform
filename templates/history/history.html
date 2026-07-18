@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block title %}Ride History — CommuteSync{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col-12 text-center text-md-start">
+    <h2 class="fw-bold mb-1 text-primary"><i class="fa-solid fa-clock-rotate-left me-2"></i>Ride History</h2>
+    <p class="text-secondary mb-0">Browse completed carpools, receipt details, and fuel offsets</p>
+  </div>
+</div>
+
+<div class="card card-premium border-0 shadow-sm bg-white" x-data="{ activeTab: 'passenger' }">
+  <div class="card-header bg-white border-bottom p-0">
+    <ul class="nav nav-tabs border-0 px-4" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link py-3 px-4 fw-semibold text-secondary" :class="{'active text-primary border-bottom border-primary border-3': activeTab === 'passenger'}" @click="activeTab = 'passenger'">
+          <i class="fa-solid fa-person-seat me-2"></i> Passenger Bookings
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link py-3 px-4 fw-semibold text-secondary" :class="{'active text-primary border-bottom border-primary border-3': activeTab === 'driver'}" @click="activeTab = 'driver'">
+          <i class="fa-solid fa-steering-wheel me-2"></i> Offered Drives
+        </button>
+      </li>
+    </ul>
+  </div>
+
+  <div class="card-body p-4">
+    <!-- Passenger History -->
+    <div x-show="activeTab === 'passenger'">
+      {% if passenger_trips %}
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Booking ID</th>
+                <th>Driver</th>
+                <th>Route Path</th>
+                <th>Date</th>
+                <th>Seats</th>
+                <th>Fare Paid</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for trip in passenger_trips %}
+                <tr>
+                  <td class="fw-bold text-dark">#{{ trip.id }}</td>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="bg-teal-light text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 28px; height: 28px; font-size: 0.75rem;">
+                        {{ trip.ride.driver.username|slice:":1"|upper }}
+                      </div>
+                      <span class="small">{{ trip.ride.driver.get_full_name|default:trip.ride.driver.username }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="small text-dark">{{ trip.ride.start_point_name|truncatechars:30 }} &rarr; {{ trip.ride.end_point_name|truncatechars:30 }}</span>
+                  </td>
+                  <td class="small">{{ trip.ride.departure_time|date:"M d, Y" }}</td>
+                  <td class="small">{{ trip.seats_booked }} Seat{{ trip.seats_booked|pluralize }}</td>
+                  <td class="fw-bold text-success">₹{{ trip.fare_paid }}</td>
+                  <td>
+                    <a href="{% url 'history_detail' trip.id %}" class="btn btn-sm btn-outline-primary-custom px-3 py-1 rounded-pill small">
+                      Details
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center py-5">
+          <div class="opacity-20 mb-3 text-secondary" style="font-size: 3rem;">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+          </div>
+          <p class="text-secondary mb-0">No completed passenger history found.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Driver History -->
+    <div x-show="activeTab === 'driver'" style="display: none;">
+      {% if driver_rides %}
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Ride ID</th>
+                <th>Car Details</th>
+                <th>Route Path</th>
+                <th>Date</th>
+                <th>Seats Sold</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ride in driver_rides %}
+                <tr>
+                  <td class="fw-bold text-dark">#{{ ride.id }}</td>
+                  <td class="small"><i class="fa-solid fa-car me-1 text-primary"></i> {{ ride.vehicle.make }} {{ ride.vehicle.model }}</td>
+                  <td>
+                    <span class="small text-dark">{{ ride.start_point_name|truncatechars:30 }} &rarr; {{ ride.end_point_name|truncatechars:30 }}</span>
+                  </td>
+                  <td class="small">{{ ride.departure_time|date:"M d, Y" }}</td>
+                  <td class="small">{{ ride.seats_available }} / {{ ride.total_seats }} left</td>
+                  <td>
+                    {% with ride.trips.first as first_trip %}
+                      {% if first_trip %}
+                        <a href="{% url 'history_detail' first_trip.id %}" class="btn btn-sm btn-outline-primary-custom px-3 py-1 rounded-pill small">
+                          View details
+                        </a>
+                      {% else %}
+                        <span class="text-muted small">No bookings</span>
+                      {% endif %}
+                    {% endwith %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center py-5">
+          <div class="opacity-20 mb-3 text-secondary" style="font-size: 3rem;">
+            <i class="fa-solid fa-road"></i>
+          </div>
+          <p class="text-secondary mb-0">No completed offered drives found.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
