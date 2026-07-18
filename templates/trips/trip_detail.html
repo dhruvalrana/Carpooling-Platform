@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+{% block title %}Trip #{{ trip.pk }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{% url 'my_trips' %}" style="font-size:0.875rem;color:#888;">← My Trips</a>
+    <h1 style="margin-top:4px;">Trip #{{ trip.pk }}</h1>
+  </div>
+  <span class="badge badge-{{ trip.status|lower|cut:'_' }}">{{ trip.get_status_display }}</span>
+</div>
+
+<div class="page-body">
+
+  <!-- ── Signature: Trip Status Stepper ── -->
+  <div class="card mb-6">
+    <div class="card-body">
+      <div class="trip-stepper" id="trip-stepper" role="progressbar">
+        {% with trip_statuses=statuses %}
+        {% for s in statuses %}
+          {% if forloop.first %}
+          <div class="step-item">
+            <div class="step-dot {% if trip.status == s %}current{% elif s in trip.status or forloop.counter <= statuses|length %}{% endif %}
+              {% with filled_statuses='BOOKED,STARTED,IN_PROGRESS,COMPLETED,PAYMENT_PENDING,PAYMENT_COMPLETED' %}
+              {% if s in filled_statuses and trip.status != 'BOOKED' %}filled{% endif %}
+              {% endwith %}
+              {% if trip.status == s %}current{% endif %}
+            "></div>
+            <div class="step-label {% if trip.status == s %}active{% endif %}">{{ s|title|cut:"_" }}</div>
+          </div>
+          {% else %}
+          <div class="step-connector {% if forloop.counter0 <= statuses|join:','|split:','|list %}{% endif %}"></div>
+          <div class="step-item">
+            <div class="step-dot {% if trip.status == s %}current{% endif %}"></div>
+            <div class="step-label {% if trip.status == s %}active{% endif %}">{{ s|cut:"_"|title }}</div>
+          </div>
+          {% endif %}
+        {% endfor %}
+        {% endwith %}
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:16px;">
+
+      <!-- Route & Participants -->
+      <div class="card">
+        <div class="card-header"><h2>Route & Details</h2></div>
+        <div class="card-body">
+          <div class="route-line-vertical" style="margin-bottom:16px;">
+            <div class="route-stop">
+              <div class="route-dot-sm filled"></div>
+              <div>
+                <div style="font-weight:600;">{{ trip.ride.pickup_label }}</div>
+                <div class="mono" style="font-size:0.75rem;color:#888;">{{ trip.ride.departure_datetime|date:"D d M Y, H:i" }}</div>
+              </div>
+            </div>
+            <div style="height:24px;width:2px;border-left:2px dashed var(--route-amber);margin-left:7px;"></div>
+            <div class="route-stop">
+              <div class="route-dot-sm destination"></div>
+              <div style="font-weight:600;">{{ trip.ride.destination_label }}</div>
+            </div>
+          </div>
+
+          <hr class="divider-dashed">
+
+          <div class="flex gap-4" style="margin-top:16px;">
+            <div>
+              <div style="font-size:0.75rem;color:#888;">Driver</div>
+              <div style="font-weight:600;font-size:0.9rem;">{{ trip.ride.driver.get_full_name }}</div>
+              {% if trip.ride.driver.phone %}
+              <a href="tel:{{ trip.ride.driver.phone }}" style="font-size:0.8rem;color:var(--transit-blue);">📞 {{ trip.ride.driver.phone }}</a>
+              {% endif %}
+            </div>
+            <div>
+              <div style="font-size:0.75rem;color:#888;">Vehicle</div>
+              <div style="font-weight:600;font-size:0.9rem;">{{ trip.ride.vehicle.make }} {{ trip.ride.vehicle.model }}</div>
+              <div class="mono" style="font-size:0.75rem;color:#888;">{{ trip.ride.vehicle.registration_number }}</div>
+            </div>
+            <div>
+              <div style="font-size:0.75rem;color:#888;">Fare</div>
+              <div class="mono" style="font-weight:700;font-size:1.1rem;color:var(--route-amber);">₹{{ trip.fare_amount }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Driver actions (status transitions) -->
+      {% if is_driver %}
+      <div class="card">
+        <div class="card-header"><h2>Driver Controls</h2></div>
+        <div class="card-body">
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            {% if trip.status == 'BOOKED' %}
+            <form method="post" action="{% url 'transition_trip' trip.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="status" value="STARTED">
+              <button type="submit" class="btn btn-cta btn-lg btn-block" id="start-trip-btn">▶ Start Trip</button>
+            </form>
+            {% elif trip.status == 'STARTED' %}
+            <form method="post" action="{% url 'transition_trip' trip.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="status" value="IN_PROGRESS">
+              <button type="submit" class="btn btn-cta btn-lg btn-block" id="in-progress-btn">▶ Picked Up Passengers</button>
+            </form>
+            {% elif trip.status == 'IN_PROGRESS' %}
+            <form method="post" action="{% url 'transition_trip' trip.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="status" value="COMPLETED">
+              <button type="submit" class="btn btn-primary btn-lg btn-block" id="complete-trip-btn">✓ Complete Trip</button>
+            </form>
+            {% elif trip.status in 'COMPLETED PAYMENT_PENDING' %}
+            <p style="color:#888;font-size:0.9rem;">Waiting for passenger to pay.</p>
+            {% elif trip.status == 'PAYMENT_COMPLETED' %}
+            <div class="alert alert-success">Trip completed and paid. ✓</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Payment (passenger) -->
+      {% if not is_driver and trip.status == 'PAYMENT_PENDING' %}
+      <div class="card">
+        <div class="card-header"><h2>Payment Due</h2></div>
+        <div class="card-body">
+          <div class="mono" style="font-size:2rem;font-weight:700;color:var(--route-amber);margin-bottom:16px;">₹{{ trip.fare_amount }}</div>
+          <a href="{% url 'payment_screen' trip.pk %}" class="btn btn-cta btn-lg btn-block" id="pay-now-btn">Pay Now →</a>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Chat -->
+      <div class="card">
+        <div class="card-header flex justify-between items-center">
+          <h2>Chat</h2>
+          {% if trip.ride.driver.phone %}
+          <a href="tel:{{ trip.ride.driver.phone }}" class="btn btn-ghost btn-sm" id="call-btn">📞 Call</a>
+          {% endif %}
+        </div>
+        <div class="card-body" style="padding:0;">
+          <div class="chat-panel" id="chat-messages">
+            {% for msg in chat_messages %}
+            <div class="chat-msg {% if msg.sender == request.user %}me{% else %}them{% endif %}">
+              <div class="chat-bubble">{{ msg.body }}</div>
+              <div class="chat-meta">{{ msg.sender.get_full_name }} · {{ msg.sent_at|time:"H:i" }}</div>
+            </div>
+            {% empty %}
+            <div style="text-align:center;color:#aaa;padding:24px;font-size:0.875rem;">No messages yet. Say hello!</div>
+            {% endfor %}
+          </div>
+          <div style="padding:12px;">
+            <form id="chat-form" class="chat-input-row">
+              {% csrf_token %}
+              <input type="text" id="chat-input" class="form-control" placeholder="Type a message…" autocomplete="off">
+              <button type="submit" class="btn btn-primary" id="chat-send-btn">Send</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Map (live tracking) -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div class="card">
+        <div class="card-header flex justify-between items-center">
+          <h2>
+            {% if trip.status in 'STARTED,IN_PROGRESS' %}
+              <span style="color:var(--eco-teal);">● Live Tracking</span>
+            {% else %}
+              Route Map
+            {% endif %}
+          </h2>
+          <span id="eta-display" class="mono" style="font-size:0.9rem;color:#888;"></span>
+        </div>
+        <div id="trip-map" style="height:400px;"></div>
+        {% if trip.status not in 'STARTED,IN_PROGRESS' %}
+        <div class="card-footer">
+          <p style="font-size:0.8rem;color:#888;">Live tracking available when trip is started.</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Driver sends pings -->
+      {% if is_driver and trip.status in 'STARTED,IN_PROGRESS' %}
+      <div class="card">
+        <div class="card-body">
+          <div style="font-size:0.875rem;color:#888;margin-bottom:8px;">Your location is being shared with passengers.</div>
+          <div id="tracking-status" style="font-size:0.8rem;color:var(--eco-teal);">Tracking active</div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const tripId = {{ trip.pk }};
+const rideId = {{ trip.ride.pk }};
+const isDriver = {{ is_driver|yesno:"true,false" }};
+const tripStatus = '{{ trip.status }}';
+const geometry = {{ geometry_json|safe }};
+
+// ── Map setup ──
+const map = L.map('trip-map').setView([{{ trip.ride.pickup_lat }}, {{ trip.ride.pickup_lng }}], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: '© OpenStreetMap'}).addTo(map);
+
+const amberIcon = L.divIcon({html: '<div style="width:14px;height:14px;background:#E8A33D;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>', iconSize:[14,14], iconAnchor:[7,7]});
+const blueIcon = L.divIcon({html: '<div style="width:14px;height:14px;background:#2B3A67;border-radius:3px;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>', iconSize:[14,14], iconAnchor:[7,7]});
+const liveIcon = L.divIcon({html: '<div style="width:18px;height:18px;background:#2E8B74;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(46,139,116,0.5);animation:pulse 1.5s infinite;"></div>', iconSize:[18,18], iconAnchor:[9,9]});
+
+L.marker([{{ trip.ride.pickup_lat }}, {{ trip.ride.pickup_lng }}], {icon: amberIcon}).addTo(map).bindPopup('Pickup');
+L.marker([{{ trip.ride.destination_lat }}, {{ trip.ride.destination_lng }}], {icon: blueIcon}).addTo(map).bindPopup('Destination');
+
+let routeLine;
+if (geometry && geometry.length > 0) {
+  const coords = geometry.map(c => [c[1], c[0]]);
+  routeLine = L.polyline(coords, {color: '#E8A33D', weight: 4, opacity: 0.6}).addTo(map);
+  map.fitBounds(coords, {padding: [20, 20]});
+}
+
+let liveMarker = null;
+
+// ── Driver location pings ──
+if (isDriver && ['STARTED', 'IN_PROGRESS'].includes(tripStatus)) {
+  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+  function sendPing(position) {
+    fetch('/api/tracking/ping/', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+      body: JSON.stringify({
+        ride_id: rideId,
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        heading: position.coords.heading,
+        speed: position.coords.speed ? position.coords.speed * 3.6 : null,
+      })
+    }).catch(() => {});
+  }
+
+  if (navigator.geolocation) {
+    navigator.geolocation.watchPosition(sendPing, null, {enableHighAccuracy: true, maximumAge: 5000});
+  }
+}
+
+// ── Passenger: poll for live location ──
+if (!isDriver && ['STARTED', 'IN_PROGRESS'].includes(tripStatus)) {
+  function pollLocation() {
+    fetch(`/api/tracking/${rideId}/latest/`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.lat) {
+          const ll = [data.lat, data.lng];
+          if (!liveMarker) {
+            liveMarker = L.marker(ll, {icon: liveIcon}).addTo(map).bindPopup('Driver');
+          } else {
+            liveMarker.setLatLng(ll);
+          }
+          map.panTo(ll);
+        }
+      })
+      .catch(() => {});
+  }
+  setInterval(pollLocation, 4000);
+  pollLocation();
+}
+
+// ── Chat ──
+const chatPanel = document.getElementById('chat-messages');
+const chatForm = document.getElementById('chat-form');
+const chatInput = document.getElementById('chat-input');
+const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+function scrollChat() { chatPanel.scrollTop = chatPanel.scrollHeight; }
+scrollChat();
+
+chatForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const body = chatInput.value.trim();
+  if (!body) return;
+
+  fetch(`/trips/${tripId}/chat/`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrfToken},
+    body: `body=${encodeURIComponent(body)}`
+  })
+  .then(r => r.json())
+  .then(msg => {
+    const div = document.createElement('div');
+    div.className = 'chat-msg me';
+    div.innerHTML = `<div class="chat-bubble">${msg.body}</div><div class="chat-meta">You · just now</div>`;
+    chatPanel.appendChild(div);
+    chatInput.value = '';
+    scrollChat();
+  });
+});
+
+// Poll new messages every 5s
+let lastMsgId = {{ chat_messages.last.pk|default:"0" }};
+function pollChat() {
+  fetch(`/api/chat/${tripId}/messages/?after=${lastMsgId}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.results) {
+        data.results.forEach(msg => {
+          if (msg.id > lastMsgId) {
+            lastMsgId = msg.id;
+            const div = document.createElement('div');
+            div.className = 'chat-msg them';
+            div.innerHTML = `<div class="chat-bubble">${msg.body}</div><div class="chat-meta">${msg.sender_name}</div>`;
+            chatPanel.appendChild(div);
+            scrollChat();
+          }
+        });
+      }
+    })
+    .catch(() => {});
+}
+setInterval(pollChat, 5000);
+
+// Trip stepper visual highlight
+document.querySelectorAll('.step-dot').forEach((dot, i) => {
+  const statusOrder = ['BOOKED','STARTED','IN_PROGRESS','COMPLETED','PAYMENT_PENDING','PAYMENT_COMPLETED'];
+  const currentIdx = statusOrder.indexOf(tripStatus);
+  if (i <= currentIdx) dot.classList.add('filled');
+  if (i === currentIdx) dot.classList.add('current');
+});
+document.querySelectorAll('.step-connector').forEach((conn, i) => {
+  const statusOrder = ['BOOKED','STARTED','IN_PROGRESS','COMPLETED','PAYMENT_PENDING','PAYMENT_COMPLETED'];
+  const currentIdx = statusOrder.indexOf(tripStatus);
+  if (i < currentIdx) conn.classList.add('filled');
+});
+</script>
+<style>
+@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(46,139,116,0.4)} 50%{box-shadow:0 0 0 8px rgba(46,139,116,0)} }
+</style>
+{% endblock %}

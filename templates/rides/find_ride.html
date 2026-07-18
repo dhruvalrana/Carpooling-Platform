@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Find a Ride{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Find a Ride</h1>
+</div>
+
+<div class="page-body">
+
+  <!-- Search form -->
+  <div class="card mb-6">
+    <div class="card-body">
+      <form method="get" id="find-ride-form">
+        <div class="grid-2" style="gap:16px;margin-bottom:16px;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Pickup Location</label>
+            {{ form.pickup_label }}
+            {% if form.pickup_label.errors %}<div class="form-error">{{ form.pickup_label.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Destination</label>
+            {{ form.destination_label }}
+            {% if form.destination_label.errors %}<div class="form-error">{{ form.destination_label.errors.0 }}</div>{% endif %}
+          </div>
+        </div>
+        <div class="grid-3" style="gap:16px;margin-bottom:16px;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Date</label>
+            {{ form.departure_date }}
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Time</label>
+            {{ form.departure_time }}
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Seats Needed</label>
+            {{ form.seats_needed }}
+          </div>
+        </div>
+        <button type="submit" class="btn btn-cta btn-lg" id="search-rides-btn">Search Rides</button>
+      </form>
+    </div>
+  </div>
+
+  {% if request.GET.pickup_label %}
+  <div class="grid-2" style="align-items:start;">
+
+    <!-- Results -->
+    <div>
+      <h2 class="mb-4">
+        {% if results %}{{ results|length }} ride{{ results|length|pluralize }} found{% else %}No rides found{% endif %}
+      </h2>
+
+      {% if results %}
+        {% for ride in results %}
+        <div class="ride-card mb-4">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+            <div class="flex items-center gap-3">
+              <div class="avatar">{{ ride.driver.first_name|first|upper }}{{ ride.driver.last_name|first|upper }}</div>
+              <div>
+                <div style="font-weight:600;">{{ ride.driver.get_full_name }}</div>
+                <div style="font-size:0.8rem;color:#888;">{{ ride.vehicle.make }} {{ ride.vehicle.model }}</div>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div class="display-lg" style="font-size:1.5rem;color:var(--route-amber);">₹{{ ride.fare_per_seat }}</div>
+              <div style="font-size:0.75rem;color:#888;">per seat</div>
+            </div>
+          </div>
+
+          <!-- Route line -->
+          <div class="route-line-vertical" style="margin-bottom:16px;">
+            <div class="route-stop">
+              <div class="route-dot-sm filled"></div>
+              <span style="font-size:0.875rem;font-weight:600;">{{ ride.pickup_label|truncatechars:40 }}</span>
+            </div>
+            <div style="height:16px;width:2px;border-left:2px dashed var(--route-amber);margin-left:7px;"></div>
+            <div class="route-stop">
+              <div class="route-dot-sm destination"></div>
+              <span style="font-size:0.875rem;color:#666;">{{ ride.destination_label|truncatechars:40 }}</span>
+            </div>
+          </div>
+
+          <div class="flex justify-between items-center">
+            <div class="flex gap-4">
+              <div>
+                <div class="mono" style="font-weight:600;font-size:0.9rem;">{{ ride.departure_datetime|date:"D, d M" }}</div>
+                <div class="mono" style="font-size:0.8rem;color:#888;">{{ ride.departure_datetime|time:"H:i" }}</div>
+              </div>
+              <div>
+                <div style="font-weight:600;font-size:0.9rem;">{{ ride.seats_available }} seats</div>
+                <div style="font-size:0.8rem;color:#888;">available</div>
+              </div>
+            </div>
+            <div>
+              {% if ride.driver == request.user %}
+                <span class="badge badge-booked">Your ride</span>
+              {% else %}
+                <a href="{% url 'ride_detail' ride.pk %}" class="btn btn-cta btn-sm" id="book-ride-{{ ride.pk }}-btn">Book →</a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state" style="padding:40px 16px;">
+          <div class="empty-route-line">
+            <div class="pin"></div>
+            <div class="dashes"></div>
+            <div class="pin-q"></div>
+          </div>
+          <h3>No rides yet</h3>
+          <p>Try a nearby time or route, or be the first to offer one.</p>
+          <a href="{% url 'offer_ride' %}" class="btn btn-cta">Offer a Ride</a>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Route map preview -->
+    <div class="card">
+      <div class="card-header"><h2>Route Preview</h2></div>
+      <div id="search-map" style="height:400px;"></div>
+      {% if route %}
+      <div class="card-footer">
+        {% if route.distance_km %}
+        <span class="mono" style="font-size:0.875rem;color:#666;">~{{ route.distance_km }} km · {{ route.duration_min }} min</span>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if request.GET.pickup_label %}
+<script>
+const geometry = {{ geometry_json|safe }};
+const map = L.map('search-map').setView([20.5937, 78.9629], 5);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors'
+}).addTo(map);
+if (geometry && geometry.length > 0) {
+  const coords = geometry.map(c => [c[1], c[0]]);
+  L.polyline(coords, {color: '#E8A33D', weight: 4, opacity: 0.85}).addTo(map);
+  L.marker(coords[0]).addTo(map).bindPopup('Pickup');
+  L.marker(coords[coords.length-1]).addTo(map).bindPopup('Destination');
+  map.fitBounds(coords, {padding: [20, 20]});
+}
+</script>
+{% endif %}
+{% endblock %}

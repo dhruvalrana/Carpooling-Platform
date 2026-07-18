@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}My Trips{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>My Trips</h1>
+</div>
+
+<div class="page-body">
+  <!-- Tabs -->
+  <div class="tabs">
+    <a href="?tab=upcoming" class="tab-item {% if tab == 'upcoming' %}active{% endif %}">Upcoming</a>
+    <a href="?tab=active" class="tab-item {% if tab == 'active' %}active{% endif %}">Active</a>
+    <a href="?tab=completed" class="tab-item {% if tab == 'completed' %}active{% endif %}">Completed</a>
+  </div>
+
+  <!-- As passenger -->
+  {% if as_passenger %}
+  <h2 style="margin-bottom:16px;font-size:1rem;color:#888;text-transform:uppercase;letter-spacing:0.05em;">As Passenger</h2>
+  {% for trip in as_passenger %}
+  <a href="{% url 'trip_detail' trip.pk %}" style="text-decoration:none;display:block;margin-bottom:12px;">
+    <div class="ride-card">
+      <div class="flex justify-between items-start">
+        <div>
+          <div class="route-line-vertical">
+            <div class="route-stop">
+              <div class="route-dot-sm filled"></div>
+              <span style="font-size:0.875rem;font-weight:600;">{{ trip.ride.pickup_label|truncatechars:35 }}</span>
+            </div>
+            <div style="height:12px;width:2px;border-left:2px dashed var(--line-grey);margin-left:7px;"></div>
+            <div class="route-stop">
+              <div class="route-dot-sm destination"></div>
+              <span style="font-size:0.875rem;color:#666;">{{ trip.ride.destination_label|truncatechars:35 }}</span>
+            </div>
+          </div>
+          <div style="margin-top:12px;font-size:0.8rem;color:#888;">
+            Driver: <strong>{{ trip.ride.driver.get_full_name }}</strong>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;margin-left:16px;">
+          <span class="badge badge-{{ trip.status|lower|cut:'_' }}">{{ trip.get_status_display }}</span>
+          <div class="mono" style="font-size:0.8rem;color:#888;margin-top:8px;">{{ trip.ride.departure_datetime|date:"d M, H:i" }}</div>
+          <div class="mono" style="font-weight:700;color:var(--route-amber);margin-top:4px;">₹{{ trip.fare_amount }}</div>
+        </div>
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+  {% endif %}
+
+  <!-- As driver -->
+  {% if as_driver %}
+  <h2 style="margin-bottom:16px;margin-top:{% if as_passenger %}24px{% else %}0{% endif %};font-size:1rem;color:#888;text-transform:uppercase;letter-spacing:0.05em;">As Driver</h2>
+  {% for trip in as_driver %}
+  <a href="{% url 'trip_detail' trip.pk %}" style="text-decoration:none;display:block;margin-bottom:12px;">
+    <div class="ride-card">
+      <div class="flex justify-between items-start">
+        <div>
+          <div class="route-line-vertical">
+            <div class="route-stop">
+              <div class="route-dot-sm filled"></div>
+              <span style="font-size:0.875rem;font-weight:600;">{{ trip.ride.pickup_label|truncatechars:35 }}</span>
+            </div>
+            <div style="height:12px;width:2px;border-left:2px dashed var(--route-amber);margin-left:7px;"></div>
+            <div class="route-stop">
+              <div class="route-dot-sm destination"></div>
+              <span style="font-size:0.875rem;color:#666;">{{ trip.ride.destination_label|truncatechars:35 }}</span>
+            </div>
+          </div>
+          <div style="margin-top:12px;font-size:0.8rem;color:#888;">
+            Passenger: <strong>{{ trip.passenger.get_full_name }}</strong>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;margin-left:16px;">
+          <span class="badge badge-{{ trip.status|lower|cut:'_' }}">{{ trip.get_status_display }}</span>
+          <div class="mono" style="font-size:0.8rem;color:#888;margin-top:8px;">{{ trip.ride.departure_datetime|date:"d M, H:i" }}</div>
+          <div class="mono" style="font-weight:700;color:var(--route-amber);margin-top:4px;">₹{{ trip.fare_amount }}</div>
+        </div>
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+  {% endif %}
+
+  {% if not as_passenger and not as_driver %}
+  <div class="empty-state">
+    <div class="empty-route-line"><div class="pin"></div><div class="dashes"></div><div class="pin-q"></div></div>
+    <h3>No trips here</h3>
+    <p>{% if tab == 'upcoming' %}Find a ride or offer one to get started.{% elif tab == 'active' %}No active trips right now.{% else %}Your completed trips will appear here.{% endif %}</p>
+    <a href="{% url 'find_ride' %}" class="btn btn-cta">Find a Ride</a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Ride History{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Ride History</h1>
+</div>
+<div class="page-body">
+  {% if trips %}
+  <!-- Desktop table -->
+  <div class="card" style="display:block;">
+    <div style="overflow-x:auto;">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Trip</th>
+            <th>Route</th>
+            <th>Driver</th>
+            <th>Date</th>
+            <th>Vehicle</th>
+            <th>Fare</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for trip in trips %}
+          <tr>
+            <td class="mono" style="font-weight:600;">#{{ trip.pk }}</td>
+            <td>
+              <div style="font-size:0.8rem;font-weight:600;">{{ trip.ride.pickup_label|truncatechars:20 }}</div>
+              <div style="font-size:0.75rem;color:#888;">→ {{ trip.ride.destination_label|truncatechars:20 }}</div>
+            </td>
+            <td>{{ trip.ride.driver.get_full_name }}</td>
+            <td class="mono" style="font-size:0.8rem;white-space:nowrap;">{{ trip.completed_at|date:"d M Y" }}</td>
+            <td style="font-size:0.8rem;">{{ trip.ride.vehicle.make }} {{ trip.ride.vehicle.model }}</td>
+            <td class="mono" style="font-weight:700;color:var(--route-amber);">₹{{ trip.fare_amount }}</td>
+            <td><span class="badge badge-payment-completed">Paid</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Mobile cards (shown on small screens) -->
+  <div class="mobile-cards" style="display:none;">
+    {% for trip in trips %}
+    <div class="ride-card" style="margin-bottom:12px;">
+      <div class="flex justify-between" style="margin-bottom:8px;">
+        <span class="mono" style="font-size:0.8rem;color:#888;">#{{ trip.pk }}</span>
+        <span class="mono" style="font-weight:700;color:var(--route-amber);">₹{{ trip.fare_amount }}</span>
+      </div>
+      <div style="font-size:0.875rem;font-weight:600;">{{ trip.ride.pickup_label|truncatechars:30 }}</div>
+      <div style="font-size:0.8rem;color:#888;">→ {{ trip.ride.destination_label|truncatechars:30 }}</div>
+      <div class="flex justify-between" style="margin-top:8px;">
+        <span style="font-size:0.8rem;color:#666;">{{ trip.completed_at|date:"d M Y" }}</span>
+        <span class="badge badge-payment-completed">Paid</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-route-line"><div class="pin"></div><div class="dashes"></div><div class="pin-q"></div></div>
+    <h3>No completed trips yet</h3>
+    <p>Book and complete a ride to see it here.</p>
+    <a href="{% url 'find_ride' %}" class="btn btn-cta">Find a Ride</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+<style>
+@media(max-width:600px){
+  .card table { display:none; }
+  .mobile-cards { display:block !important; }
+}
+</style>

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Checkout{% endblock %}
+
+{% block content %}
+<div class="page-body" style="max-width:480px;">
+  <div class="card">
+    <div class="card-body" style="text-align:center;padding:40px;">
+      <h1 style="margin-bottom:8px;">Complete Payment</h1>
+      <p style="color:#888;margin-bottom:32px;">You'll be redirected to Razorpay Test Mode</p>
+      <button id="rzp-button" class="btn btn-cta btn-lg btn-block">Pay ₹{{ order.amount|default:amount }}</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+const options = {
+  key: '{{ razorpay_key }}',
+  amount: '{{ order.amount }}',
+  currency: 'INR',
+  name: 'CarpoolOrg',
+  description: '{% if is_wallet_recharge %}Wallet Recharge{% else %}Ride Payment — Trip #{{ trip.pk }}{% endif %}',
+  order_id: '{{ order.id }}',
+  handler: function(response) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    {% if is_wallet_recharge %}
+    form.action = '/api/wallet/recharge/verify/';
+    {% else %}
+    form.action = '{% url "verify_payment" trip.pk %}';
+    {% endif %}
+    [
+      ['razorpay_order_id', response.razorpay_order_id],
+      ['razorpay_payment_id', response.razorpay_payment_id],
+      ['razorpay_signature', response.razorpay_signature],
+      ['method', '{{ method|default:"CARD" }}'],
+      ['csrfmiddlewaretoken', '{{ csrf_token }}'],
+    ].forEach(([name, value]) => {
+      const input = document.createElement('input');
+      input.type = 'hidden'; input.name = name; input.value = value;
+      form.appendChild(input);
+    });
+    document.body.appendChild(form);
+    form.submit();
+  },
+  prefill: { email: '{{ request.user.email }}', contact: '{{ request.user.phone }}' },
+  theme: { color: '#2B3A67' },
+};
+
+document.getElementById('rzp-button').onclick = function() {
+  new Razorpay(options).open();
+  return false;
+};
+</script>
+{% endblock %}

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CarpoolOrg — Enterprise Carpooling</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  {% load static %}<link rel="stylesheet" href="{% static 'css/main.css' %}">
+</head>
+<body>
+<div class="splash-screen">
+  <div class="splash-brand">
+    <!-- Route line signature element -->
+    <div class="splash-route" style="justify-content:center;margin-bottom:32px;">
+      <div class="splash-dot"></div>
+      <div class="splash-dashes"></div>
+      <div class="splash-dot" style="background:rgba(232,163,61,0.4);"></div>
+    </div>
+
+    <div class="wordmark">CarpoolOrg</div>
+    <p class="tagline">Enterprise ride sharing — share your commute</p>
+  </div>
+
+  <div class="splash-buttons">
+    <a href="{% url 'login' %}" class="btn btn-cta btn-lg btn-block" id="splash-login-btn">Sign In</a>
+    <a href="{% url 'signup' %}" class="btn btn-outline btn-lg btn-block" style="border-color:rgba(255,255,255,0.3);color:white;" id="splash-signup-btn">Create Account</a>
+  </div>
+
+  <p style="color:rgba(255,255,255,0.3);font-size:0.75rem;text-align:center;">
+    Sign up with your company email to join your organization
+  </p>
+</div>
+</body>
+</html>

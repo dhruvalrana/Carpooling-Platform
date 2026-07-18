@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}My Vehicles{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>My Vehicles</h1>
+  <a href="{% url 'add_vehicle' %}" class="btn btn-cta" id="add-vehicle-btn">+ Add Vehicle</a>
+</div>
+
+<div class="page-body">
+{% if vehicles %}
+  <div class="grid-3">
+    {% for v in vehicles %}
+    <div class="card">
+      <div class="card-body">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+          <div style="width:44px;height:44px;background:rgba(43,58,103,0.08);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+            <svg width="22" height="22" fill="none" stroke="var(--transit-blue)" stroke-width="2" viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v9a2 2 0 01-2 2h-3"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
+          </div>
+          <div>
+            <div style="font-weight:700;font-family:var(--font-display);">{{ v.make }} {{ v.model }}</div>
+            <div class="mono" style="font-size:0.8rem;color:#888;">{{ v.registration_number }}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:4px;">
+          <span style="font-size:0.8rem;color:#666;">Seats:</span>
+          <span class="mono" style="font-size:0.8rem;font-weight:600;">{{ v.seating_capacity }}</span>
+        </div>
+        {% if v.color %}
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+          <span style="font-size:0.8rem;color:#666;">Color:</span>
+          <span style="font-size:0.8rem;">{{ v.color }}</span>
+        </div>
+        {% endif %}
+      </div>
+      <div class="card-footer flex gap-2">
+        <a href="{% url 'edit_vehicle' v.pk %}" class="btn btn-ghost btn-sm" id="edit-vehicle-{{ v.pk }}">Edit</a>
+        <form method="post" action="{% url 'delete_vehicle' v.pk %}" style="display:inline;" onsubmit="return confirm('Remove this vehicle?')">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-sm" id="del-vehicle-{{ v.pk }}">Remove</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state">
+    <div class="empty-route-line">
+      <div class="pin"></div>
+      <div class="dashes"></div>
+      <div class="pin-q"></div>
+    </div>
+    <h3>No vehicles registered</h3>
+    <p>You need at least one registered vehicle to offer rides.</p>
+    <a href="{% url 'add_vehicle' %}" class="btn btn-cta" id="empty-add-vehicle-btn">Register a Vehicle</a>
+  </div>
+{% endif %}
+</div>
+{% endblock %}

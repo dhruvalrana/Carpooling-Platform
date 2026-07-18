@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Good morning, {{ user.first_name }} 👋</h1>
+    <p class="text-muted" style="margin-top:4px;">{{ user.organization }} · Employee</p>
+  </div>
+  <div class="flex gap-3">
+    <a href="{% url 'find_ride' %}" class="btn btn-outline" id="header-find-btn">Find a Ride</a>
+    <a href="{% url 'offer_ride' %}" class="btn btn-cta" id="header-offer-btn">+ Offer a Ride</a>
+  </div>
+</div>
+
+<div class="page-body">
+
+  <!-- Big action cards -->
+  <div class="grid-2 mb-6">
+    <a href="{% url 'find_ride' %}" class="card" style="text-decoration:none;" id="dash-find-card">
+      <div class="card-body" style="padding:32px;">
+        <div style="width:48px;height:48px;background:rgba(43,58,103,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
+          <svg width="24" height="24" fill="none" stroke="var(--transit-blue)" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+        <h2 style="font-size:1.25rem;margin-bottom:8px;">Find a Ride</h2>
+        <p class="text-muted">Search for available rides matching your route and schedule.</p>
+        <div style="margin-top:16px;">
+          <span class="btn btn-primary btn-sm">Search Rides →</span>
+        </div>
+      </div>
+    </a>
+
+    <a href="{% url 'offer_ride' %}" class="card" style="text-decoration:none;" id="dash-offer-card">
+      <div class="card-body" style="padding:32px;">
+        <div style="width:48px;height:48px;background:rgba(232,163,61,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
+          <svg width="24" height="24" fill="none" stroke="var(--route-amber)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        </div>
+        <h2 style="font-size:1.25rem;margin-bottom:8px;">Offer a Ride</h2>
+        <p class="text-muted">Publish your commute route and let colleagues join you.</p>
+        <div style="margin-top:16px;">
+          <span class="btn btn-cta btn-sm">Publish Ride →</span>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <div class="grid-2">
+    <!-- Upcoming trips -->
+    <div>
+      <div class="flex justify-between items-center mb-4">
+        <h2>Upcoming Trips</h2>
+        <a href="{% url 'my_trips' %}" class="btn btn-ghost btn-sm">See all</a>
+      </div>
+
+      {% if upcoming_trips %}
+        {% for trip in upcoming_trips %}
+        <a href="{% url 'trip_detail' trip.pk %}" style="text-decoration:none;display:block;margin-bottom:12px;">
+          <div class="ride-card">
+            <div class="flex justify-between items-center">
+              <div>
+                <div class="route-line-vertical">
+                  <div class="route-stop">
+                    <div class="route-dot-sm filled"></div>
+                    <span style="font-size:0.875rem;font-weight:600;">{{ trip.ride.pickup_label|truncatechars:30 }}</span>
+                  </div>
+                  <div style="height:12px;width:2px;border-left:2px dashed var(--line-grey);margin-left:7px;"></div>
+                  <div class="route-stop">
+                    <div class="route-dot-sm destination"></div>
+                    <span style="font-size:0.875rem;color:#666;">{{ trip.ride.destination_label|truncatechars:30 }}</span>
+                  </div>
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <span class="badge badge-{{ trip.status|lower|cut:'_' }}">{{ trip.get_status_display }}</span>
+                <div class="mono" style="font-size:0.8rem;color:#666;margin-top:4px;">{{ trip.ride.departure_datetime|date:"d M, H:i" }}</div>
+              </div>
+            </div>
+          </div>
+        </a>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state" style="padding:32px 16px;">
+          <div class="empty-route-line" style="justify-content:flex-start;margin-bottom:16px;">
+            <div class="pin"></div>
+            <div class="dashes"></div>
+            <div class="pin-q"></div>
+          </div>
+          <p style="color:#888;font-size:0.875rem;">No upcoming trips. Find a ride or offer one!</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Stats -->
+    <div>
+      <h2 class="mb-4">Your Stats</h2>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="stat-card">
+          <div class="stat-value eco-stat">{{ completed_trips }}</div>
+          <div class="stat-label">Trips Completed</div>
+        </div>
+        <div class="stat-card">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <a href="{% url 'wallet' %}" style="text-decoration:none;">
+              <div class="stat-value">₹<span id="wallet-bal">—</span></div>
+            </a>
+          </div>
+          <div class="stat-label">Wallet Balance · <a href="{% url 'wallet' %}" style="color:var(--transit-blue);">Top up</a></div>
+        </div>
+        <div class="stat-card">
+          <div style="font-size:0.875rem;color:#666;margin-bottom:8px;">Quick Links</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <a href="{% url 'ride_history' %}" style="font-size:0.875rem;color:var(--transit-blue);">→ Ride History</a>
+            <a href="{% url 'reports' %}" style="font-size:0.875rem;color:var(--transit-blue);">→ My Reports</a>
+            <a href="{% url 'my_vehicles' %}" style="font-size:0.875rem;color:var(--transit-blue);">→ My Vehicles</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Load wallet balance
+fetch('/api/auth/me/')
+  .then(r => r.json())
+  .catch(() => null);
+fetch('/wallet/', {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+  .catch(() => null);
+</script>
+{% endblock %}

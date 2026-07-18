@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Wallet{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Wallet</h1>
+</div>
+<div class="page-body" style="max-width:560px;">
+
+  <!-- Balance card -->
+  <div class="card mb-6" style="background:var(--transit-blue);border-color:var(--transit-blue);">
+    <div class="card-body" style="text-align:center;padding:40px;">
+      <div style="font-size:0.875rem;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Wallet Balance</div>
+      <div class="mono" style="font-size:3.5rem;font-weight:700;color:var(--route-amber);">₹{{ wallet.balance }}</div>
+      <form method="post" action="{% url 'wallet_recharge' %}" style="margin-top:24px;display:flex;gap:12px;justify-content:center;">
+        {% csrf_token %}
+        <input type="number" name="amount" placeholder="Enter amount" min="10" step="10"
+               class="form-control" style="max-width:160px;background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);color:white;">
+        <button type="submit" class="btn btn-cta" id="recharge-wallet-btn">Top Up</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Transaction history -->
+  <div class="card">
+    <div class="card-header flex justify-between items-center">
+      <h2>Transactions</h2>
+      <span class="badge badge-booked">Last 20</span>
+    </div>
+    {% if transactions %}
+    <div>
+      {% for txn in transactions %}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 24px;border-bottom:1px solid var(--line-grey);">
+        <div>
+          <div style="font-weight:600;font-size:0.9rem;">{{ txn.reason }}</div>
+          <div class="mono" style="font-size:0.75rem;color:#888;">{{ txn.created_at|date:"d M Y, H:i" }}</div>
+        </div>
+        <div class="mono" style="font-weight:700;font-size:1rem;color:{% if txn.type == 'CREDIT' %}var(--eco-teal){% else %}var(--alert-rust){% endif %};">
+          {% if txn.type == 'CREDIT' %}+{% else %}−{% endif %}₹{{ txn.amount }}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding:40px;">
+      <p>No transactions yet. Top up to get started.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

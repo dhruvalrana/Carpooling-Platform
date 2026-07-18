@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Settings</h1></div>
+<div class="page-body" style="max-width:480px;">
+  <div class="card">
+    <div class="card-body">
+      {% with links=True %}
+      <div style="display:flex;flex-direction:column;">
+        {% for name, url_name, icon in settings_links %}
+        <a href="{% url url_name %}" style="display:flex;align-items:center;gap:12px;padding:16px 0;border-bottom:1px solid var(--line-grey);color:var(--ink);text-decoration:none;" id="settings-{{ url_name }}">
+          <span style="font-size:1.25rem;">{{ icon }}</span>
+          <span style="font-weight:500;">{{ name }}</span>
+          <span style="margin-left:auto;color:#aaa;">→</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% endwith %}
+      <!-- Fallback hardcoded links -->
+      <div style="display:flex;flex-direction:column;">
+        <a href="{% url 'my_trips' %}" style="display:flex;align-items:center;gap:12px;padding:16px 0;border-bottom:1px solid var(--line-grey);color:var(--ink);text-decoration:none;">🗓 My Trips <span style="margin-left:auto;color:#aaa;">→</span></a>
+        <a href="{% url 'my_vehicles' %}" style="display:flex;align-items:center;gap:12px;padding:16px 0;border-bottom:1px solid var(--line-grey);color:var(--ink);text-decoration:none;">🚗 My Vehicles <span style="margin-left:auto;color:#aaa;">→</span></a>
+        <a href="{% url 'wallet' %}" style="display:flex;align-items:center;gap:12px;padding:16px 0;border-bottom:1px solid var(--line-grey);color:var(--ink);text-decoration:none;">👛 Wallet <span style="margin-left:auto;color:#aaa;">→</span></a>
+        <a href="{% url 'ride_history' %}" style="display:flex;align-items:center;gap:12px;padding:16px 0;border-bottom:1px solid var(--line-grey);color:var(--ink);text-decoration:none;">📋 Ride History <span style="margin-left:auto;color:#aaa;">→</span></a>
+        <a href="{% url 'reports' %}" style="display:flex;align-items:center;gap:12px;padding:16px 0;border-bottom:1px solid var(--line-grey);color:var(--ink);text-decoration:none;">📊 Reports <span style="margin-left:auto;color:#aaa;">→</span></a>
+        <a href="{% url 'profile' %}" style="display:flex;align-items:center;gap:12px;padding:16px 0;border-bottom:1px solid var(--line-grey);color:var(--ink);text-decoration:none;">👤 Profile <span style="margin-left:auto;color:#aaa;">→</span></a>
+        <a href="{% url 'logout' %}" style="display:flex;align-items:center;gap:12px;padding:16px 0;color:var(--alert-rust);text-decoration:none;">🚪 Sign Out <span style="margin-left:auto;color:#aaa;">→</span></a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

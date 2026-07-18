@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>My Profile</h1>
+</div>
+<div class="page-body" style="max-width:560px;">
+  <div class="card">
+    <div class="card-header">
+      <div class="flex items-center gap-4">
+        <div class="avatar avatar-lg">
+          {% if user.photo %}
+            <img src="{{ user.photo.url }}" alt="Profile photo">
+          {% else %}
+            {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+          {% endif %}
+        </div>
+        <div>
+          <div style="font-weight:600;font-size:1.1rem;">{{ user.get_full_name }}</div>
+          <div class="mono" style="font-size:0.8rem;color:#888;">{{ user.email }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="form-group">
+          <label class="form-label">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}<div class="form-error">{{ field.errors.0 }}</div>{% endif %}
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary btn-block" id="profile-save-btn">Save Changes</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

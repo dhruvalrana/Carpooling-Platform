@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Payment{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{% url 'trip_detail' trip.pk %}" style="font-size:0.875rem;color:#888;">← Trip #{{ trip.pk }}</a>
+    <h1 style="margin-top:4px;">Pay for Ride</h1>
+  </div>
+</div>
+
+<div class="page-body" style="max-width:560px;">
+
+  <!-- Fare display -->
+  <div class="card mb-6">
+    <div class="card-body" style="text-align:center;padding:40px;">
+      <div style="font-size:0.875rem;color:#888;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;">Amount Due</div>
+      <div class="mono" style="font-size:3rem;font-weight:700;color:var(--route-amber);">₹{{ trip.fare_amount }}</div>
+      <div style="font-size:0.875rem;color:#888;margin-top:8px;">{{ trip.ride.pickup_label|truncatechars:25 }} → {{ trip.ride.destination_label|truncatechars:25 }}</div>
+    </div>
+  </div>
+
+  <!-- Payment methods -->
+  <div class="card mb-6">
+    <div class="card-header"><h2>Select Payment Method</h2></div>
+    <div class="card-body">
+      <div class="payment-methods" id="payment-methods">
+
+        <form method="post" action="{% url 'process_payment' trip.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="method" value="CASH">
+          <button type="submit" class="payment-card" id="pay-cash-btn" style="width:100%;text-align:center;">
+            <div class="method-icon">💵</div>
+            <div class="method-name">Cash</div>
+            <div style="font-size:0.75rem;color:#888;margin-top:4px;">Pay driver directly</div>
+          </button>
+        </form>
+
+        <form method="post" action="{% url 'process_payment' trip.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="method" value="WALLET">
+          <button type="submit" class="payment-card" id="pay-wallet-btn" style="width:100%;text-align:center;" {% if wallet.balance < trip.fare_amount %}disabled{% endif %}>
+            <div class="method-icon">👛</div>
+            <div class="method-name">Wallet</div>
+            <div class="mono" style="font-size:0.75rem;color:{% if wallet.balance >= trip.fare_amount %}var(--eco-teal){% else %}var(--alert-rust){% endif %};margin-top:4px;">Balance: ₹{{ wallet.balance }}</div>
+          </button>
+        </form>
+
+        <form method="post" action="{% url 'process_payment' trip.pk %}" id="card-form">
+          {% csrf_token %}
+          <input type="hidden" name="method" value="CARD">
+          <button type="submit" class="payment-card" id="pay-card-btn" style="width:100%;text-align:center;">
+            <div class="method-icon">💳</div>
+            <div class="method-name">Card</div>
+            <div style="font-size:0.75rem;color:#888;margin-top:4px;">Visa / Mastercard</div>
+          </button>
+        </form>
+
+        <form method="post" action="{% url 'process_payment' trip.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="method" value="UPI">
+          <button type="submit" class="payment-card" id="pay-upi-btn" style="width:100%;text-align:center;">
+            <div class="method-icon">📱</div>
+            <div class="method-name">UPI</div>
+            <div style="font-size:0.75rem;color:#888;margin-top:4px;">Google Pay / PhonePe</div>
+          </button>
+        </form>
+
+      </div>
+
+      {% if wallet.balance < trip.fare_amount %}
+      <div class="alert alert-warning" style="margin-top:16px;">
+        Insufficient wallet balance. <a href="{% url 'wallet_recharge' %}" style="font-weight:600;">Top up →</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div style="font-size:0.75rem;color:#aaa;text-align:center;">
+    Card and UPI payments are processed via Razorpay Test Mode. No real money is charged.
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Add selected state to payment cards on hover
+document.querySelectorAll('.payment-card').forEach(card => {
+  card.addEventListener('mouseenter', () => {
+    document.querySelectorAll('.payment-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+  });
+});
+</script>
+{% endblock %}

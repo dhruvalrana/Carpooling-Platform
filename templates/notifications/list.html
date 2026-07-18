@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Notifications</h1></div>
+<div class="page-body" style="max-width:560px;">
+  <div class="card">
+    {% if notifications %}
+    {% for n in notifications %}
+    <div style="display:flex;align-items:flex-start;gap:12px;padding:16px;border-bottom:1px solid var(--line-grey);{% if not n.is_read %}background:rgba(43,58,103,0.03);{% endif %}">
+      <div style="width:8px;height:8px;border-radius:50%;background:{% if not n.is_read %}var(--route-amber){% else %}var(--line-grey){% endif %};margin-top:6px;flex-shrink:0;"></div>
+      <div style="flex:1;">
+        <div style="font-weight:{% if not n.is_read %}600{% else %}400{% endif %};font-size:0.9rem;">{{ n.type|title }}</div>
+        <div style="font-size:0.8rem;color:#888;">{{ n.created_at|timesince }} ago</div>
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-state" style="padding:40px;"><p>No notifications yet.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
