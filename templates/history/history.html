@@ -49,9 +49,13 @@
                   <td class="fw-bold text-dark">#{{ trip.id }}</td>
                   <td>
                     <div class="d-flex align-items-center gap-2">
-                      <div class="bg-teal-light text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 28px; height: 28px; font-size: 0.75rem;">
-                        {{ trip.ride.driver.username|slice:":1"|upper }}
-                      </div>
+                      {% if trip.ride.driver.avatar %}
+                        <img src="{{ trip.ride.driver.avatar }}" class="rounded-circle" style="width: 28px; height: 28px; object-fit: cover;" alt="{{ trip.ride.driver.username }}">
+                      {% else %}
+                        <div class="bg-teal-light text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 28px; height: 28px; font-size: 0.75rem;">
+                          {{ trip.ride.driver.first_name|slice:":1"|upper }}{{ trip.ride.driver.last_name|slice:":1"|upper }}
+                        </div>
+                      {% endif %}
                       <span class="small">{{ trip.ride.driver.get_full_name|default:trip.ride.driver.username }}</span>
                     </div>
                   </td>

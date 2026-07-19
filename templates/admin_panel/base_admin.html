@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+
+{% block title %}{% block admin_title %}Admin Panel — CommuteSync{% endblock %}{% endblock %}
+
+{% block content %}
+<style>
+  .admin-sidebar {
+    border-radius: var(--radius-lg);
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+    border: none;
+    overflow: hidden;
+  }
+  .admin-sidebar-header {
+    background: linear-gradient(135deg, var(--primary-deep) 0%, #06231c 100%);
+    color: #fff;
+    padding: 1.8rem 1.5rem;
+    text-align: center;
+    position: relative;
+    border-bottom: 3px solid var(--accent);
+  }
+  .admin-sidebar-header .shield-icon {
+    font-size: 2.5rem;
+    color: var(--accent);
+    margin-bottom: 0.65rem;
+    filter: drop-shadow(0 0 12px rgba(232, 163, 61, 0.65));
+    animation: shieldGlow 2.5s infinite alternate;
+  }
+  @keyframes shieldGlow {
+    0% {
+      transform: scale(0.96);
+      filter: drop-shadow(0 0 6px rgba(232, 163, 61, 0.4));
+    }
+    100% {
+      transform: scale(1.04);
+      filter: drop-shadow(0 0 18px rgba(232, 163, 61, 0.85));
+    }
+  }
+  .admin-menu-item {
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #4b5563 !important;
+    padding: 1.1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    border: none;
+    border-left: 4px solid transparent;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    background: transparent;
+  }
+  .admin-menu-item i {
+    font-size: 1.1rem;
+    color: #6b7280 !important;
+    transition: transform 0.2s ease;
+  }
+  .admin-menu-item:hover {
+    color: var(--primary) !important;
+    background-color: #f8faf9;
+    border-left-color: rgba(15, 102, 83, 0.4);
+    padding-left: 1.7rem;
+  }
+  .admin-menu-item:hover i {
+    color: var(--primary) !important;
+    transform: translateX(2px);
+  }
+  .admin-menu-item.active {
+    color: var(--primary-deep) !important;
+    background-color: #f0f7f4;
+    border-left-color: var(--primary);
+    font-weight: 700;
+  }
+  .admin-menu-item.active i {
+    color: var(--primary) !important;
+  }
+  .admin-main-card {
+    border-radius: var(--radius-lg);
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+    border: none;
+    padding: 2.2rem;
+  }
+</style>
+
+<div class="row g-4 py-3">
+  <!-- Admin Sidebar Column -->
+  <div class="col-lg-3">
+    <div class="admin-sidebar">
+      <div class="admin-sidebar-header">
+        <div class="shield-icon">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <h5 class="fw-bold mb-1 text-white">CommuteSync Admin</h5>
+        <span class="badge bg-white-10 text-uppercase font-monospace" style="font-size: 0.68rem; letter-spacing: 0.05em; background: rgba(255,255,255,0.12); color: var(--accent);">
+          System Control
+        </span>
+      </div>
+      
+      <div class="d-flex flex-column py-2">
+        <a href="{% url 'admin_dashboard' %}" class="admin-menu-item {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+          <i class="fa-solid fa-gauge-high"></i>
+          <span>Overview KPI</span>
+        </a>
+        <a href="{% url 'admin_employees' %}" class="admin-menu-item {% if request.resolver_match.url_name == 'admin_employees' %}active{% endif %}">
+          <i class="fa-solid fa-users"></i>
+          <span>Employee Accounts</span>
+        </a>
+        <a href="{% url 'admin_vehicles' %}" class="admin-menu-item {% if request.resolver_match.url_name == 'admin_vehicles' %}active{% endif %}">
+          <i class="fa-solid fa-car"></i>
+          <span>Registered Vehicles</span>
+        </a>
+        <a href="{% url 'admin_config' %}" class="admin-menu-item {% if request.resolver_match.url_name == 'admin_config' %}active{% endif %}">
+          <i class="fa-solid fa-sliders"></i>
+          <span>Configurations</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Main Content Column -->
+  <div class="col-lg-9">
+    {% block admin_content %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

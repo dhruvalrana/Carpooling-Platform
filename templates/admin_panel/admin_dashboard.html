@@ -1,120 +1,184 @@
-{% extends 'base.html' %}
+{% extends 'admin_panel/base_admin.html' %}
 
-{% block title %}Admin Panel — CommuteSync{% endblock %}
+{% block admin_title %}Admin Overview — CommuteSync{% endblock %}
 
-{% block content %}
-<div class="row">
-  <!-- Sidebar Nav Column -->
-  <div class="col-md-3 mb-4">
-    <div class="card card-premium p-0 border-0 bg-white overflow-hidden shadow-sm">
-      <div class="bg-teal-light p-3 border-bottom text-center">
-        <h5 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-lock me-1"></i>System Admin</h5>
-        <small class="text-secondary">{{ config.org_name }}</small>
+{% block admin_content %}
+<div class="row mb-4">
+  <div class="col-12">
+    <h3 class="fw-bold mb-1 text-primary-deep">Operations Overview</h3>
+    <p class="text-secondary small mb-0">Manage organizational workspace scope, configurations, and commuter fleet data.</p>
+  </div>
+</div>
+
+<!-- Admin KPI Cards Row -->
+<div class="row g-3 mb-4">
+  <!-- Employees KPI -->
+  <div class="col-md-6 col-lg-3">
+    <div class="card card-premium p-3 border-0 bg-white shadow-sm h-100">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <span class="text-secondary small fw-semibold">Employees</span>
+        <span class="text-primary fs-5 bg-teal-light rounded-circle p-2 d-inline-flex"><i class="fa-solid fa-users"></i></span>
       </div>
-      <div class="list-group list-group-flush">
-        <a href="{% url 'admin_dashboard' %}" class="list-group-item list-group-item-action py-3 fw-semibold text-primary active bg-light border-0 border-start border-primary border-4">
-          <i class="fa-solid fa-gauge-high me-2"></i> Overview KPI
-        </a>
-        <a href="{% url 'admin_employees' %}" class="list-group-item list-group-item-action py-3 fw-semibold text-secondary border-0 border-start border-transparent border-4">
-          <i class="fa-solid fa-users me-2"></i> Employee Accounts
-        </a>
-        <a href="{% url 'admin_vehicles' %}" class="list-group-item list-group-item-action py-3 fw-semibold text-secondary border-0 border-start border-transparent border-4">
-          <i class="fa-solid fa-car me-2"></i> Registered Vehicles
-        </a>
-        <a href="{% url 'admin_config' %}" class="list-group-item list-group-item-action py-3 fw-semibold text-secondary border-0 border-start border-transparent border-4">
-          <i class="fa-solid fa-gears me-2"></i> System Configuration
-        </a>
+      <h3 class="fw-bold mb-1 text-dark">{{ employees_count }}</h3>
+      <small class="text-muted" style="font-size: 0.72rem;">Registered workspace users</small>
+    </div>
+  </div>
+  
+  <!-- Vehicles KPI -->
+  <div class="col-md-6 col-lg-3">
+    <div class="card card-premium p-3 border-0 bg-white shadow-sm h-100">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <span class="text-secondary small fw-semibold">Vehicles</span>
+        <span class="text-primary fs-5 bg-teal-light rounded-circle p-2 d-inline-flex"><i class="fa-solid fa-car"></i></span>
       </div>
+      <h3 class="fw-bold mb-1 text-dark">{{ vehicles_count }}</h3>
+      <small class="text-muted" style="font-size: 0.72rem;">Active commuter fleet size</small>
     </div>
   </div>
 
-  <!-- KPI Overview and Main Dashboard Content -->
-  <div class="col-md-9">
-    <div class="row mb-4">
-      <div class="col-12">
-        <h3 class="fw-bold mb-1 text-primary">Operations Overview</h3>
-        <p class="text-secondary">Administrative parameters and operational volumes</p>
+  <!-- Active Rides KPI -->
+  <div class="col-md-6 col-lg-3">
+    <div class="card card-premium p-3 border-0 bg-white shadow-sm h-100">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <span class="text-secondary small fw-semibold">Active Pool</span>
+        <span class="text-accent fs-5 bg-light p-2 rounded-circle d-inline-flex" style="background: rgba(232, 163, 61, 0.1) !important;"><i class="fa-solid fa-route"></i></span>
+      </div>
+      <h3 class="fw-bold mb-1 text-dark">{{ active_rides_count }}</h3>
+      <small class="text-muted" style="font-size: 0.72rem;">Rides active today</small>
+    </div>
+  </div>
+
+  <!-- Completed Trips KPI -->
+  <div class="col-md-6 col-lg-3">
+    <div class="card card-premium p-3 border-0 bg-white shadow-sm h-100">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <span class="text-secondary small fw-semibold">Completed</span>
+        <span class="text-success fs-5 bg-light p-2 rounded-circle d-inline-flex" style="background: rgba(46, 204, 113, 0.1) !important;"><i class="fa-solid fa-circle-check"></i></span>
+      </div>
+      <h3 class="fw-bold mb-1 text-dark">{{ completed_trips_count }}</h3>
+      <small class="text-muted" style="font-size: 0.72rem;">Total completed bookings</small>
+    </div>
+  </div>
+</div>
+
+<!-- Active Configurations Summary Card -->
+<div class="admin-main-card mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h5 class="fw-bold text-primary-deep mb-0"><i class="fa-solid fa-gears me-2 text-accent"></i>Current Fleet Rates</h5>
+    <span class="badge bg-teal-light text-primary py-2 px-3 fw-semibold">Operational Settings</span>
+  </div>
+  
+  <div class="row g-3">
+    <div class="col-md-4">
+      <div class="bg-light p-3.5 rounded-4 border text-center">
+        <small class="text-secondary d-block" style="font-size: 0.75rem;">Fuel Cost Rate</small>
+        <h4 class="fw-bold text-dark mt-1 mb-0">₹{{ config.fuel_cost_per_km }}/km</h4>
       </div>
     </div>
-
-    <!-- Admin KPI Cards Row -->
-    <div class="row g-4 mb-4">
-      <!-- Employees KPI -->
-      <div class="col-md-6 col-lg-3">
-        <div class="card card-premium p-3 border-0 bg-white shadow-sm">
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <span class="text-secondary small fw-semibold">Employees</span>
-            <span class="text-primary fs-4"><i class="fa-solid fa-users"></i></span>
-          </div>
-          <h3 class="fw-bold mb-0 text-dark">{{ employees_count }}</h3>
-          <small class="text-secondary">Total registered users</small>
-        </div>
-      </div>
-      
-      <!-- Vehicles KPI -->
-      <div class="col-md-6 col-lg-3">
-        <div class="card card-premium p-3 border-0 bg-white shadow-sm">
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <span class="text-secondary small fw-semibold">Vehicles</span>
-            <span class="text-primary fs-4"><i class="fa-solid fa-car"></i></span>
-          </div>
-          <h3 class="fw-bold mb-0 text-dark">{{ vehicles_count }}</h3>
-          <small class="text-secondary">Active commuter fleet</small>
-        </div>
-      </div>
-
-      <!-- Active Rides KPI -->
-      <div class="col-md-6 col-lg-3">
-        <div class="card card-premium p-3 border-0 bg-white shadow-sm">
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <span class="text-secondary small fw-semibold">Active Pool</span>
-            <span class="text-accent fs-4"><i class="fa-solid fa-route"></i></span>
-          </div>
-          <h3 class="fw-bold mb-0 text-dark">{{ active_rides_count }}</h3>
-          <small class="text-secondary">Rides active today</small>
-        </div>
-      </div>
-
-      <!-- Completed Trips KPI -->
-      <div class="col-md-6 col-lg-3">
-        <div class="card card-premium p-3 border-0 bg-white shadow-sm">
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <span class="text-secondary small fw-semibold">Completed</span>
-            <span class="text-success fs-4"><i class="fa-solid fa-circle-check"></i></span>
-          </div>
-          <h3 class="fw-bold mb-0 text-dark">{{ completed_trips_count }}</h3>
-          <small class="text-secondary">Total bookings completed</small>
-        </div>
+    <div class="col-md-4">
+      <div class="bg-light p-3.5 rounded-4 border text-center">
+        <small class="text-secondary d-block" style="font-size: 0.75rem;">Travel Cost Rate</small>
+        <h4 class="fw-bold text-dark mt-1 mb-0">₹{{ config.travel_cost_per_km }}/km</h4>
       </div>
     </div>
-
-    <!-- Active Configurations Summary Card -->
-    <div class="card card-premium p-4 border-0 bg-white shadow-sm">
-      <h5 class="fw-bold text-primary mb-3"><i class="fa-solid fa-gears me-2"></i>Current Fleet Rates</h5>
-      <div class="row">
-        <div class="col-md-4 mb-3 mb-md-0">
-          <div class="bg-light p-3 rounded-4 border text-center">
-            <small class="text-secondary d-block">Fuel Cost Rate</small>
-            <h4 class="fw-bold text-dark mt-1 mb-0">₹{{ config.fuel_cost_per_km }}/km</h4>
-          </div>
-        </div>
-        <div class="col-md-4 mb-3 mb-md-0">
-          <div class="bg-light p-3 rounded-4 border text-center">
-            <small class="text-secondary d-block">Travel Cost Rate</small>
-            <h4 class="fw-bold text-dark mt-1 mb-0">₹{{ config.travel_cost_per_km }}/km</h4>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="bg-light p-3 rounded-4 border text-center">
-            <small class="text-secondary d-block">Enterprise Scope</small>
-            <h4 class="fw-bold text-dark mt-1 mb-0">{{ config.org_name }}</h4>
-          </div>
-        </div>
+    <div class="col-md-4">
+      <div class="bg-light p-3.5 rounded-4 border text-center">
+        <small class="text-secondary d-block" style="font-size: 0.75rem;">Enterprise Scope</small>
+        <h4 class="fw-bold text-dark mt-1 mb-0">{{ config.org_name }}</h4>
       </div>
-      <div class="mt-4 pt-3 border-top d-flex justify-content-end">
-        <a href="{% url 'admin_config' %}" class="btn btn-sm btn-outline-primary-custom">
-          Modify configurations
-        </a>
+    </div>
+  </div>
+  <div class="mt-4 pt-3 border-top d-flex justify-content-end">
+    <a href="{% url 'admin_config' %}" class="btn btn-accent-custom px-4 py-2.5 rounded-3 fw-semibold">
+      <i class="fa-solid fa-pen-to-square me-1"></i>Modify configurations
+    </a>
+  </div>
+</div>
+
+<!-- Employee Participation & Activity Feed -->
+<div class="row g-4">
+  <!-- Recent Offers/Rides -->
+  <div class="col-lg-6">
+    <div class="admin-main-card h-100">
+      <h5 class="fw-bold text-primary-deep mb-3"><i class="fa-solid fa-car-side me-2 text-accent"></i>Recent Commuter Offers</h5>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle" style="font-size: 0.82rem;">
+          <thead class="table-light">
+            <tr>
+              <th>Driver</th>
+              <th>Route</th>
+              <th>Time</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ride in recent_rides %}
+              <tr>
+                <td>
+                  <div class="fw-semibold text-dark">{{ ride.driver.get_full_name|default:ride.driver.username }}</div>
+                  <small class="text-muted">{{ ride.driver.department|default:"Commuter" }}</small>
+                </td>
+                <td>
+                  <div class="text-truncate" style="max-width: 150px;" title="{{ ride.start_name }} → {{ ride.end_name }}">
+                    {{ ride.start_name }} → {{ ride.end_name }}
+                  </div>
+                </td>
+                <td class="font-monospace text-secondary">{{ ride.departure_time|date:"d M, H:i" }}</td>
+                <td>
+                  <span class="badge {% if ride.status == 'PUBLISHED' %}bg-success-subtle text-success{% elif ride.status == 'COMPLETED' %}bg-primary-subtle text-primary{% else %}bg-secondary-subtle text-secondary{% endif %}">
+                    {{ ride.get_status_display }}
+                  </span>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="4" class="text-center text-muted py-3">No recent rides published.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Recent Bookings/Matches -->
+  <div class="col-lg-6">
+    <div class="admin-main-card h-100">
+      <h5 class="fw-bold text-primary-deep mb-3"><i class="fa-solid fa-circle-nodes me-2 text-accent"></i>Recent Commute Matches</h5>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle" style="font-size: 0.82rem;">
+          <thead class="table-light">
+            <tr>
+              <th>Passenger</th>
+              <th>Driver</th>
+              <th>Fare</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for trip in recent_trips %}
+              <tr>
+                <td>
+                  <div class="fw-semibold text-dark">{{ trip.passenger.get_full_name|default:trip.passenger.username }}</div>
+                  <small class="text-muted">{{ trip.passenger.department|default:"Passenger" }}</small>
+                </td>
+                <td>
+                  <div class="fw-semibold text-dark">{{ trip.ride.driver.get_full_name|default:trip.ride.driver.username }}</div>
+                </td>
+                <td class="fw-bold text-success">₹{{ trip.fare_paid|floatformat:2 }}</td>
+                <td>
+                  <span class="badge {% if trip.status == 'COMPLETED' %}bg-success-subtle text-success{% elif trip.status == 'BOOKED' %}bg-info-subtle text-info{% else %}bg-secondary-subtle text-secondary{% endif %}">
+                    {{ trip.get_status_display }}
+                  </span>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="4" class="text-center text-muted py-3">No recent bookings/matches.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
   </div>

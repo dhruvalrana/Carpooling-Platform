@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}Terms & Conditions — CommuteSync{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-5">
+  <div class="col-md-9 col-lg-8">
+    <div class="card card-premium p-4 p-md-5 border-0 shadow-sm bg-white">
+      <span class="eyebrow text-uppercase tracking-wider text-primary">Rules & Terms</span>
+      <h1 class="fw-bold mb-4 text-primary-deep"><i class="fa-solid fa-gavel me-2 text-accent"></i>Terms & Conditions</h1>
+      
+      <p class="lead text-secondary mb-4">
+        By accessing CommuteSync, you agree to comply with our corporate commuting rules and terms.
+      </p>
+
+      <h5 class="fw-bold text-primary mt-4 mb-3">1. Eligibility</h5>
+      <p class="text-secondary small">
+        Usage is limited to registered employees of the corporate campus. Drivers must hold a valid driver's license and maintain adequate vehicle insurance.
+      </p>
+
+      <h5 class="fw-bold text-primary mt-4 mb-3">2. Commuter Conduct</h5>
+      <p class="text-secondary small">
+        Commuters agree to follow pickup schedules promptly. OTP codes must be verified at the pickup point before commencing transit. Any abusive, illegal, or unsafe behavior during commutes will result in immediate profile suspension.
+      </p>
+
+      <h5 class="fw-bold text-primary mt-4 mb-3">3. Payments & Fees</h5>
+      <p class="text-secondary small">
+        Passengers agree to settle fares directly through Wallet or UPI immediately following drop-offs. Drivers are strictly prohibited from soliciting additional manual cash off-platform.
+      </p>
+
+      <div class="mt-5 border-top pt-4 text-center">
+        <a href="{% url 'splash' %}" class="btn btn-primary-custom px-4 py-2 rounded-pill">
+          <i class="fa-solid fa-arrow-left me-1"></i> Back to Home
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

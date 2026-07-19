@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}About Us — CommuteSync{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-5">
+  <div class="col-md-9 col-lg-8">
+    <div class="card card-premium p-4 p-md-5 border-0 shadow-sm bg-white">
+      <span class="eyebrow text-uppercase tracking-wider text-primary">Our Story</span>
+      <h1 class="fw-bold mb-4 text-primary-deep"><i class="fa-solid fa-people-group me-2 text-accent"></i>About CommuteSync</h1>
+      
+      <p class="lead text-secondary mb-4">
+        CommuteSync is a premium intra-corporate carpooling network designed to turn separate, gridlocked employee commutes into unified, shared journeys.
+      </p>
+
+      <h5 class="fw-bold text-primary mt-4 mb-3">Our Mission</h5>
+      <p class="text-secondary">
+        We strive to optimize daily transit to office parks, mitigate traffic congestion, reduce greenhouse gas emissions, and connect colleagues across departments to build closer work relationships. By aligning similar route vectors, we ensure that every empty seat is utilized efficiently.
+      </p>
+
+      <h5 class="fw-bold text-primary mt-4 mb-3">How It Works</h5>
+      <p class="text-secondary">
+        Employees with active vehicles can publish their planned route and departure schedules. Coworkers traveling along similar routes can search, request to join, coordinate in real-time using our chatbot, and secure matches within seconds. Commute fare settlements are seamlessly handled using digital wallets or UPI gateways.
+      </p>
+
+      <div class="mt-5 border-top pt-4 text-center">
+        <a href="{% url 'splash' %}" class="btn btn-primary-custom px-4 py-2 rounded-pill">
+          <i class="fa-solid fa-arrow-left me-1"></i> Back to Home
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

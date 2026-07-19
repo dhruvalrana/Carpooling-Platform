@@ -126,8 +126,8 @@
                 <div class="d-flex gap-2">
                   {% with ride.trips.first as first_trip %}
                     {% if first_trip %}
-                      <a href="{% url 'trip_detail' first_trip.id %}" class="btn btn-sm btn-primary-custom w-100 rounded-pill small">
-                        Manage Trip
+                      <a href="{% url 'trip_detail' first_trip.id %}" class="btn btn-sm btn-primary-custom w-100 rounded-pill small text-decoration-none d-flex align-items-center justify-content-center gap-1">
+                        <i class="fa-solid fa-circle-info"></i> View Details
                       </a>
                     {% else %}
                       <button class="btn btn-sm btn-outline-secondary w-100 rounded-pill small" disabled>

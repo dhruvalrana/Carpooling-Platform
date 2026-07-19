@@ -118,48 +118,9 @@
   </div>
 </div>
 
-<!-- Mock Razorpay Modal Backdrop & Dialog -->
-<div id="mock-payment-modal" class="position-fixed top-0 start-0 w-100 h-100 d-none justify-content-center align-items-center" style="background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); z-index: 2000;">
-  <div class="card card-premium p-4 shadow-lg border-0 bg-white text-center animate-fade-in" style="max-width: 420px; width: 90%;">
-    <div class="text-primary fs-1 mb-3">
-      <i class="fa-solid fa-credit-card"></i>
-    </div>
-    <h4 class="fw-bold text-dark mb-1">Razorpay Sandbox</h4>
-    <p class="text-secondary small mb-4">Simulate a payment for your wallet recharge</p>
-    
-    <div class="bg-light p-3 rounded-4 border mb-4 text-start">
-      <div class="d-flex justify-content-between mb-2">
-        <span class="text-secondary small">Order ID:</span>
-        <span class="fw-bold text-dark small" id="mock-order-id">order_xxxx</span>
-      </div>
-      <div class="d-flex justify-content-between">
-        <span class="text-secondary small">Amount to Recharge:</span>
-        <span class="fw-bold text-accent" id="mock-amount">₹0.00</span>
-      </div>
-    </div>
-    
-    <form id="recharge-verify-form" method="post" action="{% url 'wallet_recharge_verify' user.id %}">
-      {% csrf_token %}
-      <input type="hidden" name="razorpay_order_id" id="verify_order_id">
-      <input type="hidden" name="razorpay_payment_id" id="verify_payment_id">
-      <input type="hidden" name="razorpay_signature" id="verify_signature">
-      <input type="hidden" name="amount" id="verify_amount">
-      
-      <div class="d-flex flex-column gap-2">
-        <button type="button" class="btn btn-success py-3 rounded-4 shadow-sm fw-bold" onclick="submitMockPayment(true)">
-          <i class="fa-solid fa-circle-check me-2"></i> Simulate Success
-        </button>
-        <button type="button" class="btn btn-outline-danger py-2 rounded-4" onclick="submitMockPayment(false)">
-          <i class="fa-solid fa-circle-xmark me-2"></i> Simulate Failure
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
   function walletRecharge() {
     return {
@@ -187,65 +148,14 @@
             return;
           }
           
-          if (data.is_mock) {
-            document.getElementById('verify_order_id').value = data.order_id;
-            document.getElementById('verify_amount').value = data.amount;
-            document.getElementById('mock-order-id').innerText = data.order_id;
-            document.getElementById('mock-amount').innerText = '₹' + data.amount.toFixed(2);
-            
-            const modal = document.getElementById('mock-payment-modal');
-            modal.classList.remove('d-none');
-            modal.classList.add('d-flex');
-          } else {
-            const hostedForm = document.createElement('form');
-            hostedForm.method = 'POST';
-            hostedForm.action = 'https://api.razorpay.com/v1/checkout/hosted';
-            
-            const params = {
-              'key_id': data.key_id,
-              'amount': parseInt(data.amount * 100).toString(),
-              'currency': data.currency,
-              'name': data.org_name,
-              'description': 'Wallet Recharge',
-              'order_id': data.order_id,
-              'prefill[name]': "{{ user.get_full_name|default:user.username }}",
-              'prefill[email]': "{{ user.email }}",
-              'callback_url': data.callback_url,
-              'cancel_url': data.cancel_url
-            };
-            
-            for (const key in params) {
-              const input = document.createElement('input');
-              input.type = 'hidden';
-              input.name = key;
-              input.value = params[key];
-              hostedForm.appendChild(input);
-            }
-            
-            document.body.appendChild(hostedForm);
-            hostedForm.submit();
-          }
+                  // Redirect directly to the full-page Razorpay Payment Link
+          window.location.href = data.payment_url;
         } catch (err) {
           console.error('Recharge initialization failed', err);
           alert('Network error. Failed to initialize payment: ' + err.message);
         }
       }
     };
-  }
-
-  function submitMockPayment(success) {
-    if (success) {
-      const orderId = document.getElementById('verify_order_id').value;
-      // Generate mock credentials
-      document.getElementById('verify_payment_id').value = 'pay_mock_' + Math.random().toString(36).substring(2, 11);
-      document.getElementById('verify_signature').value = 'sig_mock_' + Math.random().toString(36).substring(2, 11);
-      document.getElementById('recharge-verify-form').submit();
-    } else {
-      const modal = document.getElementById('mock-payment-modal');
-      modal.classList.add('d-none');
-      modal.classList.remove('d-flex');
-      alert('Mock payment simulation failed/cancelled.');
-    }
   }
 </script>
 {% endblock %}

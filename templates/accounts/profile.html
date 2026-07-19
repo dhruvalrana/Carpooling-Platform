@@ -3,55 +3,645 @@
 {% block title %}My Profile — CommuteSync{% endblock %}
 
 {% block content %}
+<style>
+  .profile-avatar-wrapper {
+    margin-top: -60px;
+    margin-bottom: 20px;
+  }
+  .avatar-preview {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent) 0%, #D4AF37 100%);
+    color: var(--primary-deep);
+    font-size: 2.2rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    box-shadow: var(--shadow-md);
+    transition: transform 0.3s ease;
+  }
+  .avatar-preview:hover {
+    transform: scale(1.05);
+  }
+  .profile-card {
+    border-radius: var(--radius-lg);
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    border: none;
+    overflow: hidden;
+  }
+  .form-section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary-deep);
+    border-bottom: 2px solid #EAF3EF;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.25rem;
+    letter-spacing: 0.02em;
+  }
+  .input-group-custom {
+    transition: all 0.3s ease;
+  }
+  .input-group-custom:focus-within {
+    box-shadow: 0 0 0 3px rgba(232, 163, 61, 0.15);
+  }
+  .input-group-custom .form-control {
+    border-left: none;
+  }
+  .input-group-custom .form-control:focus {
+    box-shadow: none;
+    border-color: #ced4da;
+  }
+  .input-group-custom .input-group-text {
+    background-color: #f8f9fa;
+    border-right: none;
+    color: #8c9b94;
+    transition: color 0.3s ease, background-color 0.3s ease;
+  }
+  .input-group-custom:focus-within .input-group-text {
+    color: var(--accent);
+    background-color: #fff;
+    border-color: #ced4da;
+  }
+  .input-group-custom:focus-within .form-control {
+    border-color: #ced4da;
+  }
+  
+  /* Gallery & Modal Styling */
+  .avatar-gallery-item {
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid #dee2e6;
+    border-radius: var(--radius-md);
+    padding: 6px;
+    background: #f8f9fa;
+  }
+  .avatar-gallery-item:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent) !important;
+    box-shadow: 0 4px 12px rgba(232, 163, 61, 0.15);
+  }
+  .avatar-gallery-item.selected {
+    border-color: var(--accent) !important;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(232, 163, 61, 0.25);
+  }
+  
+  /* Fix Bootstrap modal-title color override */
+  .modal-title-custom {
+    color: #ffffff !important;
+  }
+</style>
+
 <div class="row justify-content-center py-4">
-  <div class="col-md-8 col-lg-6">
-    <div class="card card-premium shadow-sm border-0">
-      <div class="card-header bg-white border-bottom py-3 px-4">
-        <h4 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-user-gear me-2"></i>Edit Profile Information</h4>
+  <div class="col-md-10 col-lg-8">
+    <div class="profile-card">
+      <!-- Premium Visual Top Header Banner with Route SVG Image -->
+      <div class="position-relative overflow-hidden" style="background: linear-gradient(135deg, var(--primary-deep) 0%, #083027 100%); height: 160px;">
+        <svg class="position-absolute w-100 h-100 start-0 top-0" style="opacity: 0.22;" viewBox="0 0 800 160" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="roadGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.8"/>
+              <stop offset="50%" stop-color="#9FD9C7" stop-opacity="0.5"/>
+              <stop offset="100%" stop-color="#7FB3CF" stop-opacity="0.1"/>
+            </linearGradient>
+            <radialGradient id="hubRadial" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.6"/>
+              <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <!-- Grid mesh -->
+          <path d="M0,40 L800,40 M0,80 L800,80 M0,120 L800,120 M100,0 L100,160 M200,0 L200,160 M300,0 L300,160 M400,0 L400,160 M500,0 L500,160 M600,0 L600,160 M700,0 L700,160" stroke="rgba(255,255,255,0.05)" stroke-width="1" />
+          
+          <!-- Highway routes -->
+          <path d="M-50,140 C180,140 260,30 450,30 C640,30 700,130 850,130" stroke="url(#roadGlow)" stroke-width="4.5" fill="none" stroke-linecap="round" />
+          <path d="M-50,50 C200,50 320,130 520,130 L850,130" stroke="url(#roadGlow)" stroke-width="2.5" fill="none" stroke-dasharray="10 10" stroke-linecap="round" />
+          <path d="M100,180 C320,180 400,10 850,10" stroke="url(#roadGlow)" stroke-width="3" fill="none" stroke-linecap="round" />
+          
+          <!-- Pulsing Connection Nodes -->
+          <circle cx="450" cy="30" r="14" fill="url(#hubRadial)" />
+          <circle cx="450" cy="30" r="5" fill="var(--accent)" />
+          <circle cx="230" cy="95" r="4" fill="#9FD9C7" />
+          <circle cx="520" cy="130" r="4" fill="#fff" />
+          <circle cx="680" cy="80" r="5" fill="#7FB3CF" />
+          
+          <!-- Dynamic matching connecting lines -->
+          <line x1="450" y1="30" x2="230" y2="95" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="3 3" stroke-opacity="0.6" />
+          <line x1="450" y1="30" x2="520" y2="130" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="3 3" stroke-opacity="0.6" />
+        </svg>
+        <div class="position-absolute start-0 bottom-0 w-100 h-100" style="background: linear-gradient(0deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 100%);"></div>
       </div>
-      <div class="card-body p-4">
-        <form method="post" action="{% url 'profile' %}">
-          {% csrf_token %}
+      
+      <div class="card-body px-4 px-md-5 pb-5">
+        <!-- Interactive Avatar Section -->
+        <div class="text-center profile-avatar-wrapper position-relative">
+          <div class="position-relative d-inline-block">
+            <!-- Initials block (visible if no avatar URL is selected) -->
+            <div id="profile-avatar-initials" class="avatar-preview d-flex align-items-center justify-content-center border border-4 border-white mx-auto {% if form.avatar.value %}d-none{% endif %}">
+              {{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}
+            </div>
+            
+            <!-- Image block (visible if an avatar URL is selected) -->
+            <img id="profile-avatar-img" class="avatar-preview border border-4 border-white mx-auto {% if not form.avatar.value %}d-none{% endif %}" 
+                 src="{% if form.avatar.value %}{{ form.avatar.value }}{% endif %}" 
+                 alt="Profile Avatar" style="object-fit: cover;">
+
+            <span class="position-absolute bottom-0 end-0 bg-white shadow-sm border border-2 border-white d-flex align-items-center justify-content-center" 
+                  style="width: 38px; height: 38px; border-radius: 50%; cursor: pointer; transform: translate(10%, 10%);" 
+                  title="Change Profile Avatar"
+                  data-bs-toggle="modal" data-bs-target="#avatarModal">
+              <i class="fa-solid fa-camera text-primary-deep" style="font-size: 1rem;"></i>
+            </span>
+          </div>
+          <h3 class="fw-bold mt-3 mb-1 text-primary-deep">{{ request.user.first_name }} {{ request.user.last_name }}</h3>
+          <p class="text-muted small mb-0">
+            <i class="fa-solid fa-briefcase me-1 text-accent"></i> {{ request.user.department|default:"No Department" }} &middot; ID: {{ request.user.employee_id|default:"N/A" }}
+          </p>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-pills nav-fill bg-light p-1.5 rounded-4 mb-4" id="profileTab" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active py-2.5 fw-bold" id="personal-tab" data-bs-toggle="tab" data-bs-target="#personal-pane" type="button" role="tab" aria-controls="personal-pane" aria-selected="true" style="border-radius: 12px;">
+              <i class="fa-solid fa-id-card me-1.5"></i>Account Details
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link py-2.5 fw-bold" id="offers-tab" data-bs-toggle="tab" data-bs-target="#offers-pane" type="button" role="tab" aria-controls="offers-pane" aria-selected="false" style="border-radius: 12px;">
+              <i class="fa-solid fa-car-side me-1.5"></i>My Offers
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link py-2.5 fw-bold" id="vehicles-tab" data-bs-toggle="tab" data-bs-target="#vehicles-pane" type="button" role="tab" aria-controls="vehicles-pane" aria-selected="false" style="border-radius: 12px;">
+              <i class="fa-solid fa-car me-1.5"></i>My Vehicles
+            </button>
+          </li>
+        </ul>
+
+        <div class="tab-content" id="profileTabContent">
+          <!-- Pane 1: Personal Details Form -->
+          <div class="tab-pane fade show active" id="personal-pane" role="tabpanel" aria-labelledby="personal-tab">
+            <form method="post" action="{% url 'profile' %}">
+              {% csrf_token %}
+              {{ form.avatar }}
           
           {% if form.errors %}
-            <div class="alert alert-danger rounded-4 border-0 mb-4" role="alert">
-              <i class="fa-solid fa-circle-exclamation me-2"></i> Correct the errors below.
+            <div class="alert alert-danger rounded-4 border-0 mb-4 shadow-sm" role="alert">
+              <div class="d-flex align-items-center">
+                <i class="fa-solid fa-circle-exclamation fs-5 me-2"></i>
+                <span class="fw-medium">Please review and fix the validation errors marked below.</span>
+              </div>
             </div>
           {% endif %}
-          
-          <div class="row mb-3">
-            <div class="col-sm-6">
-              <label for="id_first_name" class="form-label fw-semibold text-secondary small">First Name</label>
-              {{ form.first_name }}
+
+          <div class="row g-4">
+            <!-- Section 1: Personal Details -->
+            <div class="col-12">
+              <div class="form-section-title">
+                <i class="fa-solid fa-user me-2 text-accent"></i>Personal Details
+              </div>
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="id_first_name" class="form-label fw-semibold text-secondary small">First Name</label>
+                  <div class="input-group input-group-custom rounded-3 overflow-hidden shadow-sm">
+                    <span class="input-group-text"><i class="fa-solid fa-circle-user"></i></span>
+                    <input type="text" name="first_name" id="id_first_name" class="form-control" value="{{ form.first_name.value|default:'' }}" required>
+                  </div>
+                  {% if form.first_name.errors %}
+                    <div class="text-danger small mt-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>{{ form.first_name.errors.0 }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-md-6">
+                  <label for="id_last_name" class="form-label fw-semibold text-secondary small">Last Name</label>
+                  <div class="input-group input-group-custom rounded-3 overflow-hidden shadow-sm">
+                    <span class="input-group-text"><i class="fa-solid fa-circle-user"></i></span>
+                    <input type="text" name="last_name" id="id_last_name" class="form-control" value="{{ form.last_name.value|default:'' }}" required>
+                  </div>
+                  {% if form.last_name.errors %}
+                    <div class="text-danger small mt-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>{{ form.last_name.errors.0 }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-12">
+                  <label for="id_email" class="form-label fw-semibold text-secondary small">Email Address</label>
+                  <div class="input-group input-group-custom rounded-3 overflow-hidden shadow-sm">
+                    <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
+                    <input type="email" name="email" id="id_email" class="form-control" value="{{ form.email.value|default:'' }}" required>
+                  </div>
+                  {% if form.email.errors %}
+                    <div class="text-danger small mt-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>{{ form.email.errors.0 }}</div>
+                  {% endif %}
+                </div>
+              </div>
             </div>
-            <div class="col-sm-6">
-              <label for="id_last_name" class="form-label fw-semibold text-secondary small">Last Name</label>
-              {{ form.last_name }}
+
+            <!-- Section 3: Smart Commuting -->
+            <div class="col-12 mt-4">
+              <div class="form-section-title">
+                <i class="fa-solid fa-sliders me-2 text-accent"></i>Smart Commute Preferences
+              </div>
+              <div class="row g-3">
+                <div class="col-12">
+                  <label for="id_daily_commute_time" class="form-label fw-semibold text-secondary small">Standard Departure Time (Optional)</label>
+                  <div class="input-group input-group-custom rounded-3 overflow-hidden shadow-sm">
+                    <span class="input-group-text"><i class="fa-solid fa-clock"></i></span>
+                    <input type="time" name="daily_commute_time" id="id_daily_commute_time" class="form-control" value="{{ form.daily_commute_time.value|default:'' }}">
+                  </div>
+                  {% if form.daily_commute_time.errors %}
+                    <div class="text-danger small mt-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>{{ form.daily_commute_time.errors.0 }}</div>
+                  {% endif %}
+                  <small class="text-muted d-block mt-2">
+                    <i class="fa-solid fa-circle-info me-1"></i>Setting your regular commute time helps matching algorithms prioritize matches with similar routines.
+                  </small>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="mb-3">
-            <label for="id_email" class="form-label fw-semibold text-secondary small">Email Address</label>
-            {{ form.email }}
+          <div class="mt-5 d-flex flex-column flex-sm-row gap-3">
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary w-100 w-sm-50 py-3 rounded-4 fw-semibold text-uppercase letter-spacing-1">
+              Cancel
+            </a>
+            <button type="submit" class="btn btn-primary-custom w-100 w-sm-50 py-3 rounded-4 fw-semibold text-uppercase letter-spacing-1">
+              <i class="fa-solid fa-circle-check me-2"></i>Save Changes
+            </button>
           </div>
-
-          <div class="row mb-4">
-            <div class="col-sm-6">
-              <label for="id_employee_id" class="form-label fw-semibold text-secondary small">Employee ID</label>
-              {{ form.employee_id }}
-            </div>
-            <div class="col-sm-6">
-              <label for="id_department" class="form-label fw-semibold text-secondary small">Department</label>
-              {{ form.department }}
-            </div>
-          </div>
-
-          <button type="submit" class="btn btn-primary-custom w-100 py-3 rounded-4">
-            <i class="fa-solid fa-floppy-disk me-2"></i> Save Changes
-          </button>
         </form>
+      </div> <!-- Close Pane 1 -->
+
+      <!-- Pane 2: My Offers -->
+      <div class="tab-pane fade" id="offers-pane" role="tabpanel" aria-labelledby="offers-tab">
+        <h5 class="fw-bold mb-3 text-primary-deep"><i class="fa-solid fa-car-side me-2 text-accent"></i>My Published Commute Offers</h5>
+        <p class="text-secondary small mb-4">View departure schedules, track live seat occupancy, modify settings, or disable/cancel your active offers.</p>
+
+        <div class="d-flex flex-column gap-3">
+          {% for ride in my_rides %}
+            <div class="bg-light border rounded-4 p-4 position-relative">
+              <!-- Header row -->
+              <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                <div>
+                  <span class="badge {% if ride.status == 'PUBLISHED' %}bg-success-subtle text-success{% elif ride.status == 'STARTED' or ride.status == 'IN_PROGRESS' %}bg-info-subtle text-info{% elif ride.status == 'COMPLETED' %}bg-primary-subtle text-primary{% else %}bg-secondary-subtle text-secondary{% endif %} py-1.5 px-3 rounded-pill fw-semibold">
+                    {{ ride.get_status_display }}
+                  </span>
+                  <small class="text-muted d-block mt-1">Departing: <strong class="text-dark">{{ ride.departure_time|date:"M d, h:i A" }}</strong></small>
+                </div>
+                <div class="text-end">
+                  <small class="text-secondary d-block">Seats Remaining</small>
+                  <strong class="text-dark fs-5">{{ ride.seats_available }} / {{ ride.total_seats }}</strong>
+                </div>
+              </div>
+
+              <!-- Route description -->
+              <div class="position-relative ps-3.5 mb-4 small">
+                <div class="position-absolute start-0 top-0 bottom-0 border-start border-dashed" style="margin-left: 4px; border-color: #ced4da !important;"></div>
+                <div class="position-absolute start-0 top-0 bg-accent rounded-circle" style="width: 8px; height: 8px; border: 2px solid white; transform: translateX(-3px) translateY(4px);"></div>
+                <div class="position-absolute start-0 bottom-0 bg-primary rounded-circle" style="width: 8px; height: 8px; border: 2px solid white; transform: translateX(-3px) translateY(-4px);"></div>
+                
+                <div class="mb-2">
+                  <span class="text-secondary">Pickup:</span> <strong class="text-dark">{{ ride.start_point_name }}</strong>
+                </div>
+                <div>
+                  <span class="text-secondary">Drop:</span> <strong class="text-dark">{{ ride.end_point_name }}</strong>
+                </div>
+              </div>
+
+              <!-- Actions / Controls -->
+              <div class="border-top pt-3 d-flex flex-wrap gap-2 justify-content-end">
+                {% if ride.status == 'PUBLISHED' %}
+                  {% with ride.trips.first as matched_trip %}
+                    {% if matched_trip %}
+                      <a href="{% url 'trip_detail' matched_trip.id %}" class="btn btn-sm btn-primary-custom px-3.5 rounded-pill fw-semibold text-decoration-none">
+                        <i class="fa-solid fa-circle-info me-1"></i> View Details
+                      </a>
+                    {% endif %}
+                  {% endwith %}
+
+                  <!-- Update Button (Triggers modal) -->
+                  <button type="button" class="btn btn-sm btn-outline-primary-custom px-3.5 rounded-pill fw-semibold" 
+                          data-bs-toggle="modal" data-bs-target="#editRideModal{{ ride.id }}">
+                    <i class="fa-solid fa-pen-to-square me-1"></i> Update Offer
+                  </button>
+
+                  <!-- Cancel Button -->
+                  <form action="{% url 'cancel_ride_offer' ride.id %}" method="post" class="mb-0" onsubmit="return confirm('Are you sure you want to disable/cancel this ride offer?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger px-3.5 rounded-pill fw-semibold">
+                      <i class="fa-solid fa-ban me-1"></i> Disable Offer
+                    </button>
+                  </form>
+                {% else %}
+                  <span class="text-muted small italic">No operations available for {{ ride.get_status_display|lower }} rides.</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Edit Ride Modal -->
+            {% if ride.status == 'PUBLISHED' %}
+              <div class="modal fade" id="editRideModal{{ ride.id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                  <div class="modal-content border-0 shadow-lg" style="border-radius: var(--radius-lg);">
+                    <form action="{% url 'update_ride_offer' ride.id %}" method="post">
+                      {% csrf_token %}
+                      <div class="modal-header border-0 py-3 px-4" style="background: linear-gradient(135deg, var(--primary-deep) 0%, #0A4A3D 100%);">
+                        <h5 class="modal-title text-white fw-bold"><i class="fa-solid fa-pen-to-square me-2 text-accent"></i>Update Ride Offer</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                      </div>
+                      
+                      <div class="modal-body p-4">
+                        <div class="mb-3">
+                          <label class="form-label fw-semibold text-secondary small">Departure Time</label>
+                          <input type="datetime-local" name="departure_time" class="form-control rounded-3" value="{{ ride.departure_time|date:'Y-m-d' }}T{{ ride.departure_time|date:'H:i' }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                          <label class="form-label fw-semibold text-secondary small">Available Seats</label>
+                          <input type="number" name="seats_available" class="form-control rounded-3" value="{{ ride.seats_available }}" min="1" max="8" required>
+                        </div>
+                      </div>
+                      
+                      <div class="modal-footer border-0 bg-light p-3">
+                        <button type="button" class="btn btn-outline-secondary px-4 rounded-pill fw-semibold" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary-custom px-4 rounded-pill fw-semibold">Save Changes</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            {% endif %}
+          {% empty %}
+            <div class="text-center py-5 text-muted bg-light rounded-4 border">
+              <i class="fa-solid fa-car-side fs-1 mb-3 text-secondary opacity-50"></i>
+              <p class="mb-0 fw-medium">No ride offers published yet.</p>
+              <small>When you offer a commute, it will list here for management.</small>
+            </div>
+          {% endfor %}
+        </div>
+      </div> <!-- Close Pane 2 -->
+
+      <!-- Pane 3: My Vehicles -->
+      <div class="tab-pane fade" id="vehicles-pane" role="tabpanel" aria-labelledby="vehicles-tab">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h5 class="fw-bold mb-1 text-primary-deep"><i class="fa-solid fa-car me-2 text-accent"></i>My Registered Vehicles</h5>
+            <p class="text-secondary small mb-0">Manage your active commute vehicles or register new ones.</p>
+          </div>
+          <a href="{% url 'add_vehicle' %}" class="btn btn-primary-custom px-3 py-2 rounded-pill small fw-bold">
+            <i class="fa-solid fa-plus me-1"></i> Add Vehicle
+          </a>
+        </div>
+
+        <div class="d-flex flex-column gap-3 mt-4">
+          {% for vehicle in my_vehicles %}
+            <div class="bg-light border rounded-4 p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+              <div class="d-flex align-items-center gap-3">
+                <div class="bg-primary-tint text-primary rounded-4 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; font-size: 1.4rem;">
+                  <i class="fa-solid fa-car-side"></i>
+                </div>
+                <div>
+                  <strong class="text-dark d-block">{{ vehicle.make }} {{ vehicle.model }} ({{ vehicle.year }})</strong>
+                  <span class="badge bg-secondary-subtle text-secondary py-1 px-2.5 rounded-pill small fw-semibold">
+                    {{ vehicle.get_vehicle_type_display }}
+                  </span>
+                  <span class="badge bg-primary-subtle text-primary py-1 px-2.5 rounded-pill small fw-semibold ms-1">
+                    {{ vehicle.license_plate }}
+                  </span>
+                  <small class="text-muted d-block mt-1">Capacity: {{ vehicle.capacity }} seats</small>
+                </div>
+              </div>
+              <div>
+                <form action="{% url 'delete_vehicle' vehicle.id %}" method="post" onsubmit="return confirm('Are you sure you want to remove this vehicle?');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3 py-1.5 fw-bold">
+                    <i class="fa-solid fa-trash me-1"></i> Remove
+                  </button>
+                </form>
+              </div>
+            </div>
+          {% empty %}
+            <div class="text-center py-5 text-muted bg-light rounded-4 border">
+              <i class="fa-solid fa-car fs-1 mb-3 text-secondary opacity-50"></i>
+              <p class="mb-0 fw-medium">No vehicles registered yet.</p>
+              <small class="d-block mb-3">You need to register a vehicle to publish driving offers.</small>
+              <a href="{% url 'add_vehicle' %}" class="btn btn-accent-custom px-4 py-2 rounded-pill fw-bold text-white">
+                <i class="fa-solid fa-plus me-1"></i> Register Your First Vehicle
+              </a>
+            </div>
+          {% endfor %}
+        </div>
+      </div> <!-- Close Pane 3 -->
+    </div> <!-- Close Tab Content -->
+  </div>
+</div>
+</div>
+
+<!-- Avatar Selection Modal -->
+<div class="modal fade" id="avatarModal" tabindex="-1" aria-labelledby="avatarModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: var(--radius-lg); overflow: hidden;">
+      <div class="modal-header border-0 py-3 px-4" style="background: linear-gradient(135deg, var(--primary-deep) 0%, #0A4A3D 100%);">
+        <h5 class="modal-title modal-title-custom fw-bold" id="avatarModalLabel"><i class="fa-solid fa-circle-user text-accent me-2"></i>Customize Profile Avatar</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <!-- Current Avatar Section -->
+        <div class="text-center mb-4 bg-light p-3 rounded-4 border border-1 border-dashed">
+          <div class="text-secondary small fw-bold uppercase tracking-wider mb-2">Current Avatar</div>
+          <div id="modal-current-avatar-container" class="mx-auto" style="width: 90px; height: 90px;">
+            <!-- Render current preview inside modal -->
+          </div>
+        </div>
+
+        <!-- Add from Gallery Section -->
+        <div class="mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="text-secondary small fw-bold uppercase tracking-wider"><i class="fa-solid fa-images me-1 text-accent"></i>Select From Gallery</span>
+            <!-- Custom seed generator option -->
+            <button type="button" class="btn btn-sm btn-link text-primary-deep text-decoration-none fw-bold" id="btn-custom-seed" style="font-size: 0.8rem;">
+              <i class="fa-solid fa-wand-magic-sparkles me-1 text-accent"></i>Custom Seed
+            </button>
+          </div>
+          
+          <!-- Custom seed input block (hidden by default) -->
+          <div class="input-group mb-3 d-none" id="custom-seed-block">
+            <input type="text" class="form-control" id="custom-seed-input" placeholder="Type name (e.g. EcoRider)">
+            <button class="btn btn-primary-custom" type="button" id="btn-apply-custom-seed">Generate</button>
+          </div>
+
+          <div class="row g-3 row-cols-4" id="gallery-grid">
+            <!-- 8 Curated avatars -->
+          </div>
+        </div>
+
+        <!-- Control Action: Delete -->
+        <div class="border-top pt-3 text-center">
+          <button type="button" class="btn btn-outline-danger btn-sm px-4 py-2 rounded-pill fw-semibold" id="btn-delete-avatar">
+            <i class="fa-solid fa-trash-can me-2"></i>Delete Avatar & Reset
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light p-3">
+        <button type="button" class="btn btn-outline-secondary px-4 py-2.5 rounded-3 fw-semibold" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary-custom px-4 py-2.5 rounded-3 fw-semibold" id="btn-save-avatar-modal">Apply Avatar</button>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var hiddenAvatarInput = document.getElementById('id_avatar');
+    var profileAvatarInitials = document.getElementById('profile-avatar-initials');
+    var profileAvatarImg = document.getElementById('profile-avatar-img');
+    var avatarModalEl = document.getElementById('avatarModal');
+    
+    // Move the modal to document body to avoid z-index/backdrop hierarchy bugs
+    if (avatarModalEl) {
+      document.body.appendChild(avatarModalEl);
+    }
+    // Move all edit ride modals to body to prevent z-index/tab layout submit bugs
+    document.querySelectorAll('[id^="editRideModal"]').forEach(function(modalEl) {
+      document.body.appendChild(modalEl);
+    });
+    
+    // Curated gallery lists
+    var gallerySeeds = ['Aneka', 'Felix', 'John', 'Kiki', 'Max', 'Harley', 'Sasha', 'Buddy'];
+    var galleryGrid = document.getElementById('gallery-grid');
+    var modalCurrentContainer = document.getElementById('modal-current-avatar-container');
+    
+    var localAvatarUrl = hiddenAvatarInput.value || '';
+    
+    // Set user's initials dynamically from template
+    var initialsText = "{{ request.user.first_name|slice:':1' }}{{ request.user.last_name|slice:':1' }}";
+    
+    // Renders the preview inside the modal
+    function renderModalCurrent() {
+      modalCurrentContainer.innerHTML = '';
+      if (localAvatarUrl) {
+        var img = document.createElement('img');
+        img.src = localAvatarUrl;
+        img.className = 'w-100 h-100 rounded-circle border border-3 border-white shadow-sm';
+        img.style.objectFit = 'cover';
+        modalCurrentContainer.appendChild(img);
+      } else {
+        var div = document.createElement('div');
+        div.className = 'w-100 h-100 rounded-circle border border-3 border-white shadow-sm d-flex align-items-center justify-content-center fw-bold';
+        div.style.background = 'linear-gradient(135deg, var(--accent) 0%, #D4AF37 100%)';
+        div.style.color = 'var(--primary-deep)';
+        div.style.fontSize = '1.8rem';
+        div.innerText = initialsText;
+        modalCurrentContainer.appendChild(div);
+      }
+    }
+    
+    // Populate the gallery grid
+    function buildGallery() {
+      galleryGrid.innerHTML = '';
+      gallerySeeds.forEach(function(seed) {
+        var col = document.createElement('div');
+        col.className = 'col text-center';
+        
+        var avatarUrl = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + seed;
+        
+        var wrapper = document.createElement('div');
+        wrapper.className = 'avatar-gallery-item';
+        if (localAvatarUrl === avatarUrl) {
+          wrapper.classList.add('selected');
+        }
+        
+        var img = document.createElement('img');
+        img.src = avatarUrl;
+        img.className = 'w-100 rounded-circle bg-light';
+        img.style.aspectRatio = '1/1';
+        img.style.objectFit = 'cover';
+        
+        wrapper.appendChild(img);
+        
+        wrapper.addEventListener('click', function() {
+          localAvatarUrl = avatarUrl;
+          
+          // Remove selected borders from all grid items
+          var items = galleryGrid.querySelectorAll('.avatar-gallery-item');
+          items.forEach(function(item) {
+            item.classList.remove('selected');
+          });
+          
+          wrapper.classList.add('selected');
+          renderModalCurrent();
+        });
+        
+        col.appendChild(wrapper);
+        galleryGrid.appendChild(col);
+      });
+    }
+
+    // Modal Events
+    var avatarModalEl = document.getElementById('avatarModal');
+    avatarModalEl.addEventListener('show.bs.modal', function () {
+      localAvatarUrl = hiddenAvatarInput.value || '';
+      renderModalCurrent();
+      buildGallery();
+    });
+    
+    // Toggle Custom Seed Block
+    var btnCustomSeed = document.getElementById('btn-custom-seed');
+    var customSeedBlock = document.getElementById('custom-seed-block');
+    btnCustomSeed.addEventListener('click', function() {
+      customSeedBlock.classList.toggle('d-none');
+    });
+    
+    // Apply custom seed Dicebear generation
+    var btnApplyCustomSeed = document.getElementById('btn-apply-custom-seed');
+    var customSeedInput = document.getElementById('custom-seed-input');
+    btnApplyCustomSeed.addEventListener('click', function() {
+      var seedVal = customSeedInput.value.trim();
+      if (seedVal) {
+        var customUrl = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(seedVal);
+        localAvatarUrl = customUrl;
+        renderModalCurrent();
+        customSeedInput.value = '';
+        customSeedBlock.classList.add('d-none');
+        
+        // Clear highlighted states in curated list
+        var items = galleryGrid.querySelectorAll('.avatar-gallery-item');
+        items.forEach(function(item) {
+          item.classList.remove('selected');
+        });
+      }
+    });
+    
+    // Delete Avatar
+    var btnDeleteAvatar = document.getElementById('btn-delete-avatar');
+    btnDeleteAvatar.addEventListener('click', function() {
+      localAvatarUrl = '';
+      renderModalCurrent();
+      
+      // Clear highlighted states in curated list
+      var items = galleryGrid.querySelectorAll('.avatar-gallery-item');
+      items.forEach(function(item) {
+        item.classList.remove('selected');
+      });
+    });
+    
+    // Apply Avatar Selection and Save to Hidden Input (Main Form)
+    var btnSaveAvatarModal = document.getElementById('btn-save-avatar-modal');
+    btnSaveAvatarModal.addEventListener('click', function() {
+      hiddenAvatarInput.value = localAvatarUrl;
+      
+      if (localAvatarUrl) {
+        profileAvatarInitials.classList.add('d-none');
+        profileAvatarImg.src = localAvatarUrl;
+        profileAvatarImg.classList.remove('d-none');
+      } else {
+        profileAvatarImg.classList.add('d-none');
+        profileAvatarInitials.classList.remove('d-none');
+      }
+      
+      // Close the modal safely (check instance exist or create one)
+      var modal = bootstrap.Modal.getInstance(avatarModalEl);
+      if (!modal) {
+        modal = new bootstrap.Modal(avatarModalEl);
+      }
+      modal.hide();
+    });
+  });
+</script>
 {% endblock %}

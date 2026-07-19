@@ -12,6 +12,9 @@ class Employee(AbstractUser):
     department = models.CharField(max_length=100, null=True, blank=True)
     wallet_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='EMPLOYEE')
+    daily_commute_time = models.TimeField(null=True, blank=True)
+    avatar = models.CharField(max_length=255, null=True, blank=True)
+    phone_number = models.CharField(max_length=20, null=True, blank=True)
 
     def __str__(self):
         return f"{self.get_full_name() or self.username} ({self.employee_id or 'No ID'})"
@@ -86,6 +89,8 @@ class Trip(models.Model):
     seats_booked = models.PositiveIntegerField(default=1)
     fare_paid = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
     status = models.CharField(max_length=25, choices=STATUS_CHOICES, default='BOOKED')
+    payment_method = models.CharField(max_length=15, choices=[('WALLET', 'Wallet Balance'), ('UPI', 'UPI Payment')], default='WALLET')
+    otp_code = models.CharField(max_length=6, blank=True, null=True)
     rating_by_passenger = models.PositiveIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -135,8 +140,32 @@ class Notification(models.Model):
     employee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
     title = models.CharField(max_length=150)
     message = models.TextField()
+    target_url = models.CharField(max_length=255, blank=True, null=True)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Notification for {self.employee.username}: {self.title}"
+
+class RideRequest(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending Match'),
+        ('ACCEPTED', 'Matched'),
+        ('CANCELLED', 'Cancelled'),
+    ]
+    passenger = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ride_requests')
+    start_point_name = models.CharField(max_length=255)
+    start_lat = models.DecimalField(max_digits=9, decimal_places=6)
+    start_lng = models.DecimalField(max_digits=9, decimal_places=6)
+    end_point_name = models.CharField(max_length=255)
+    end_lat = models.DecimalField(max_digits=9, decimal_places=6)
+    end_lng = models.DecimalField(max_digits=9, decimal_places=6)
+    seats = models.PositiveIntegerField(default=1)
+    vehicle_type = models.CharField(max_length=10, choices=[('TWO', 'Two-Wheeler'), ('THREE', 'Three-Wheeler'), ('FOUR', 'Four-Wheeler')], default='FOUR')
+    estimated_price = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    payment_method = models.CharField(max_length=15, choices=[('WALLET', 'Wallet Balance'), ('UPI', 'UPI Payment')], default='WALLET')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Request #{self.id} by {self.passenger.username} ({self.vehicle_type})"

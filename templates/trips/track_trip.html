@@ -65,9 +65,13 @@
           <!-- Driver and vehicle Details -->
           <div class="col-md-5 border-end border-light-subtle px-md-4">
             <div class="d-flex align-items-center gap-3">
-              <div class="bg-teal-light text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 44px; height: 44px;">
-                {{ trip.ride.driver.username|slice:":1"|upper }}
-              </div>
+              {% if trip.ride.driver.avatar %}
+                <img src="{{ trip.ride.driver.avatar }}" class="rounded-circle" style="width: 44px; height: 44px; object-fit: cover;" alt="{{ trip.ride.driver.username }}">
+              {% else %}
+                <div class="bg-teal-light text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 44px; height: 44px;">
+                  {{ trip.ride.driver.first_name|slice:":1"|upper }}{{ trip.ride.driver.last_name|slice:":1"|upper }}
+                </div>
+              {% endif %}
               <div>
                 <h6 class="fw-bold text-dark mb-0">{{ trip.ride.driver.get_full_name|default:trip.ride.driver.username }}</h6>
                 <small class="text-secondary d-block">{{ trip.ride.vehicle.color }} {{ trip.ride.vehicle.make }} &bull; <strong class="font-monospace text-primary">{{ trip.ride.vehicle.license_plate }}</strong></small>
@@ -126,32 +130,29 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // Coral pin for pickup
-    const coralIcon = L.divIcon({
-      className: 'custom-div-icon',
-      html: `<div style="background-color: var(--color-accent); width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
-      iconSize: [14, 14],
-      iconAnchor: [7, 7]
+    // Red teardrop pin for pickup
+    const startIcon = L.divIcon({
+      className: '',
+      html: `<div style="position:relative;width:32px;height:42px">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 42" width="32" height="42">
+          <path d="M16 0 C7.163 0 0 7.163 0 16 C0 28 16 42 16 42 C16 42 32 28 32 16 C32 7.163 24.837 0 16 0 Z" fill="#FF5252" stroke="white" stroke-width="2"/>
+          <circle cx="16" cy="16" r="7" fill="white"/>
+        </svg></div>`,
+      iconSize: [32, 42], iconAnchor: [16, 42], popupAnchor: [0, -42]
     });
-    L.marker([startLat, startLng], {icon: coralIcon}).addTo(map).bindPopup("Pickup Point");
+    L.marker([startLat, startLng], {icon: startIcon}).addTo(map).bindPopup("<b>🟢 Pickup Point</b>");
 
-    // Teal pin for destination
-    const tealIcon = L.divIcon({
-      className: 'custom-div-icon',
-      html: `<div style="background-color: var(--color-primary); width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
-      iconSize: [14, 14],
-      iconAnchor: [7, 7]
+    // Blue teardrop pin for destination
+    const endIcon = L.divIcon({
+      className: '',
+      html: `<div style="position:relative;width:32px;height:42px">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 42" width="32" height="42">
+          <path d="M16 0 C7.163 0 0 7.163 0 16 C0 28 16 42 16 42 C16 42 32 28 32 16 C32 7.163 24.837 0 16 0 Z" fill="#1565C0" stroke="white" stroke-width="2"/>
+          <circle cx="16" cy="16" r="7" fill="white"/>
+        </svg></div>`,
+      iconSize: [32, 42], iconAnchor: [16, 42], popupAnchor: [0, -42]
     });
-    L.marker([endLat, endLng], {icon: tealIcon}).addTo(map).bindPopup("Campus Destination");
-
-    // Draw route path line
-    const routePath = L.polyline([[startLat, startLng], [endLat, endLng]], {
-      color: 'var(--color-primary)',
-      weight: 5,
-      opacity: 0.8,
-      dashArray: '8, 12'
-    }).addTo(map);
-    map.fitBounds(routePath.getBounds(), {padding: [100, 100]});
+    L.marker([endLat, endLng], {icon: endIcon}).addTo(map).bindPopup("<b>🔵 Campus Destination</b>");
 
     // Custom Car Pin icon to represent driver transit
     const carIcon = L.divIcon({
@@ -161,56 +162,59 @@
       iconAnchor: [17, 17]
     });
 
-    // Simulated path interpolation: split into 60 segments (stops)
-    const steps = 60;
-    const pathCoordinates = [];
-    for (let i = 0; i <= steps; i++) {
-      const ratio = i / steps;
-      const lat = startLat + (endLat - startLat) * ratio;
-      const lng = startLng + (endLng - startLng) * ratio;
-      pathCoordinates.push([lat, lng]);
-    }
-
-    // Set starting position of moving marker
-    let currentIndex = 0;
-    const movingMarker = L.marker(pathCoordinates[currentIndex], {icon: carIcon}).addTo(map);
-
     // Distance calculation helper
     function getDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371; // km
+      const R = 6371;
       const dLat = (lat2 - lat1) * Math.PI / 180;
       const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                Math.sin(dLon/2) * Math.sin(dLon/2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      return (R * c).toFixed(2);
+      const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+      return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(2);
     }
 
-    // Animate car marker along coordinates
-    const interval = setInterval(() => {
-      currentIndex++;
-      if (currentIndex >= pathCoordinates.length) {
-        clearInterval(interval);
-        document.getElementById('live-eta').innerText = "Arrived";
-        document.getElementById('live-distance').innerText = "Distance left: 0 km";
-        return;
-      }
+    function startAnimation(pathCoordinates) {
+      let currentIndex = 0;
+      const movingMarker = L.marker(pathCoordinates[0], {icon: carIcon}).addTo(map);
 
-      // Move marker
-      const currPos = pathCoordinates[currentIndex];
-      movingMarker.setLatLng(currPos);
-      
-      // Pan map slightly to keep car centered
-      map.panTo(currPos);
+      const interval = setInterval(() => {
+        currentIndex++;
+        if (currentIndex >= pathCoordinates.length) {
+          clearInterval(interval);
+          document.getElementById('live-eta').innerText = "Arrived";
+          document.getElementById('live-distance').innerText = "Distance left: 0 km";
+          return;
+        }
+        const currPos = pathCoordinates[currentIndex];
+        movingMarker.setLatLng(currPos);
+        map.panTo(currPos);
+        const distLeft = getDistance(currPos[0], currPos[1], endLat, endLng);
+        const estTime = Math.round(distLeft * 2);
+        document.getElementById('live-eta').innerText = estTime > 0 ? `${estTime} mins away` : "Arriving now";
+        document.getElementById('live-distance').innerText = `Distance left: ${distLeft} km`;
+      }, 2500);
+    }
 
-      // Recalculate remaining metrics
-      const distLeft = getDistance(currPos[0], currPos[1], endLat, endLng);
-      const estTime = Math.round(distLeft * 2); // 2 mins per km
+    function drawFallback() {
+      // Straight-line fallback with 60 interpolated stops
+      L.polyline([[startLat,startLng],[endLat,endLng]], {color:'#ffffff',weight:9,opacity:0.85,lineJoin:'round',lineCap:'round'}).addTo(map);
+      const line = L.polyline([[startLat,startLng],[endLat,endLng]], {color:'#1A73E8',weight:5,dashArray:'6,10',lineJoin:'round',lineCap:'round'}).addTo(map);
+      map.fitBounds(line.getBounds(), {padding:[100,100]});
+      const pts = [];
+      for (let i = 0; i <= 60; i++) { pts.push([startLat+(endLat-startLat)*(i/60), startLng+(endLng-startLng)*(i/60)]); }
+      startAnimation(pts);
+    }
 
-      document.getElementById('live-eta').innerText = estTime > 0 ? `${estTime} mins away` : "Arriving now";
-      document.getElementById('live-distance').innerText = `Distance left: ${distLeft} km`;
-    }, 2500); // Step every 2.5 seconds
+    // Fetch real road route and animate car along it
+    fetch(`https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.code !== 'Ok' || !data.routes.length) { drawFallback(); return; }
+        const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+        L.polyline(coords, {color:'#ffffff', weight:9, opacity:0.85, lineJoin:'round', lineCap:'round'}).addTo(map);
+        const line = L.polyline(coords, {color:'#1A73E8', weight:5, opacity:1, lineJoin:'round', lineCap:'round'}).addTo(map);
+        map.fitBounds(line.getBounds(), {padding:[100,100]});
+        startAnimation(coords);
+      })
+      .catch(() => drawFallback());
   });
 </script>
 {% endblock %}

@@ -1,81 +1,1579 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}CommuteSync — Enterprise Carpooling Platform{% endblock %}</title>
-  
+  <title>{% block title %}CommuteSync — Route-Matching for Teams Who Commute Together{% endblock %}</title>
+
   <!-- SEO Meta Tags -->
-  <meta name="description" content="Sleek, efficient, and eco-friendly enterprise carpooling platform. Commute together, save resources, and build community.">
-  
-  <!-- Fonts -->
+  <meta name="description"
+    content="CommuteSync matches coworkers heading the same way into a single ride — fewer cars, faster mornings, a commute that pays you back.">
+
+  <!-- Fonts: Bricolage Grotesque (display, quirky/technical) + Inter (body) + JetBrains Mono (data/utility) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
-  
-  <!-- Bootstrap 5 CSS -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+
+  <!-- Bootstrap 5 CSS (grid + utilities only — visuals are overridden below) -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  
+
   <!-- FontAwesome Icons -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
-  
+
   <!-- Leaflet CSS for Maps -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
   <!-- Custom Styles -->
   <link rel="stylesheet" href="{% static 'css/styles.css' %}">
-  
+
   <!-- HTMX & AlpineJS CDNs -->
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  
+
   <!-- ChartJS CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+  <style>
+    /* =========================================================
+       COMMUTESYNC — "MERGE LANE" DESIGN TOKENS
+       Visual language borrowed from the one moment that defines
+       carpooling: two separate lanes becoming one. That merge
+       is the logo mark, the header ticker and the footer map.
+       ========================================================= */
+    :root {
+      --bg: #F1F5F2;
+      --surface: #FFFFFF;
+      --surface-alt: #E4EEE8;
+      --ink: #122019;
+      --ink-muted: #57695F;
+      --primary: #0F6653;
+      --primary-deep: #0A4A3D;
+      --primary-tint: #DCEDE6;
+      --accent: #E8A33D;
+      --accent-deep: #C3811F;
+      --route-blue: #3E6E8E;
+      --hairline: #D8E3DC;
+      --shadow-soft: 0 16px 36px -20px rgba(10, 74, 61, 0.35);
+      --shadow-lift: 0 10px 22px -12px rgba(10, 74, 61, 0.28);
+      --radius-lg: 20px;
+      --radius-md: 12px;
+      --font-display: 'Inter', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      /* Backward-compatible aliases for child templates */
+      --text: #122019;
+      --text-muted: #57695F;
+      --primary-dark: #0A4A3D;
+      --accent-dark: #C3811F;
+      --primary-light: #DCEDE6;
+      --surface-soft: #E4EEE8;
+      --line: #D8E3DC;
+      --sky: #79C2DE;
+      --gold: #E8A33D;
+      --gold-dark: #C3811F;
+      --line-teal: #0F6653;
+      --line-rose: #D94F5C;
+      --color-primary: #0F6653;
+      --color-accent: #E8A33D;
+      --color-border: #D8E3DC;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font-body);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    .brand-font {
+      font-family: var(--font-body);
+      color: var(--primary-deep);
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--primary);
+    }
+
+    a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    a:hover {
+      color: var(--primary-deep);
+      text-decoration: none;
+    }
+
+    ::selection {
+      background: var(--accent);
+      color: var(--primary-deep);
+    }
+
+    a:focus-visible,
+    button:focus-visible,
+    input:focus-visible,
+    .nav-link-commute:focus-visible,
+    .icon-btn:focus-visible {
+      outline: 2.5px solid var(--accent-deep);
+      outline-offset: 2px;
+      border-radius: 6px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+      }
+
+      .merge-track {
+        animation: none !important;
+      }
+    }
+
+    /* =========================================================
+       HEADER
+       ========================================================= */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 1030;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: saturate(160%) blur(10px);
+      border-bottom: 1px solid var(--hairline);
+      transition: box-shadow 0.3s ease;
+    }
+
+    .site-header.is-scrolled {
+      box-shadow: var(--shadow-soft);
+    }
+
+    .navbar-commute {
+      padding: 0.9rem 0;
+    }
+
+    .brand-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.4rem;
+      color: var(--primary-deep) !important;
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-mark svg {
+      flex-shrink: 0;
+    }
+
+    .brand-mark .merge-node {
+      animation: nodePulse 2.6s ease-in-out infinite;
+      transform-origin: center;
+    }
+
+    @keyframes nodePulse {
+
+      0%,
+      100% {
+        r: 3.6;
+        opacity: 1;
+      }
+
+      50% {
+        r: 5;
+        opacity: 0.75;
+      }
+    }
+
+    .nav-link-commute {
+      font-weight: 500;
+      font-size: 0.93rem;
+      color: var(--ink) !important;
+      padding: 0.5rem 0.9rem !important;
+      border-radius: 999px;
+      position: relative;
+      transition: color 0.2s ease, background 0.2s ease;
+    }
+
+    .nav-link-commute:hover,
+    .nav-link-commute.active {
+      color: var(--primary-deep) !important;
+      background: var(--primary-tint);
+    }
+
+    .btn-commute-primary {
+      background: var(--primary-deep);
+      border: none;
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.88rem;
+      letter-spacing: 0.01em;
+      padding: 0.62rem 1.35rem;
+      border-radius: var(--radius-md);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+      box-shadow: var(--shadow-lift);
+    }
+
+    .btn-commute-primary:hover {
+      background: var(--primary);
+      transform: translateY(-2px);
+      color: #fff;
+    }
+
+    .btn-commute-ghost {
+      background: transparent;
+      border: 1.5px solid var(--hairline);
+      color: var(--ink) !important;
+      font-weight: 500;
+      font-size: 0.88rem;
+      padding: 0.57rem 1.25rem;
+      border-radius: var(--radius-md);
+      transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+      text-decoration: none;
+    }
+
+    .btn-commute-ghost:hover {
+      border-color: var(--primary);
+      color: var(--primary) !important;
+      background: var(--primary-tint);
+    }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ink);
+      background: var(--surface-alt);
+      border: none;
+      transition: background 0.2s ease, transform 0.2s ease;
+      position: relative;
+    }
+
+    .icon-btn:hover {
+      background: var(--primary-tint);
+      transform: translateY(-2px);
+    }
+
+    .icon-btn.dropdown-toggle::after {
+      display: none !important;
+    }
+
+    .icon-btn .badge-dot {
+      position: absolute;
+      top: 6px;
+      right: 7px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-deep);
+      box-shadow: 0 0 0 2px var(--surface);
+    }
+
+    /* Signature element: the MERGE TICKER — a quiet marquee just under
+       the nav, styled like a live feed of routes actually joining up. */
+    .merge-ticker {
+      background: linear-gradient(90deg, var(--primary-deep) 0%, #083027 100%);
+      border-bottom: 2px solid var(--accent);
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(10, 74, 61, 0.15);
+      width: 100%;
+      position: relative;
+      z-index: 10;
+    }
+
+    .merge-ticker .ticker-row {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .merge-ticker .ticker-label {
+      font-family: var(--font-body);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.22);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.85rem;
+      margin: 0.35rem 0;
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
+
+    .merge-ticker .ticker-label i {
+      color: #2ECC71;
+      font-size: 8px;
+      animation: pulseGreen 1.8s infinite alternate;
+    }
+
+    @keyframes pulseGreen {
+      0% {
+        transform: scale(0.8);
+        opacity: 0.5;
+        filter: drop-shadow(0 0 0 rgba(46, 204, 113, 0));
+      }
+
+      100% {
+        transform: scale(1.2);
+        opacity: 1;
+        filter: drop-shadow(0 0 6px rgba(46, 204, 113, 0.8));
+      }
+    }
+
+    .ticker-viewport {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+      mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+    }
+
+    .merge-track {
+      display: flex;
+      width: max-content;
+      animation: mergeScroll 55s linear infinite;
+      align-items: center;
+    }
+
+    .merge-track:hover {
+      animation-play-state: paused;
+    }
+
+    @keyframes mergeScroll {
+      from {
+        transform: translateX(0);
+      }
+
+      to {
+        transform: translateX(-50%);
+      }
+    }
+
+    .merge-item {
+      font-family: var(--font-body);
+      font-size: 0.8rem;
+      color: #EAF3EF;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      padding: 0.45rem 1.75rem;
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .merge-item .seg-time {
+      color: var(--accent);
+      font-weight: 700;
+      margin-right: 0.75rem;
+      background: rgba(232, 163, 61, 0.12);
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+    }
+
+    .merge-item .seg-route {
+      display: flex;
+      align-items: center;
+      color: #EAF3EF;
+    }
+
+    .merge-item .route-icon {
+      font-size: 0.75rem;
+      opacity: 0.6;
+      margin-right: 0.35rem;
+    }
+
+    .merge-item .route-arrow {
+      color: var(--accent);
+      margin: 0 0.6rem;
+      font-size: 0.75rem;
+    }
+
+    .merge-item .seg-seats {
+      margin-left: 0.85rem;
+      color: #9FD9C7;
+      background: rgba(159, 217, 199, 0.12);
+      border: 1px solid rgba(159, 217, 199, 0.15);
+      padding: 0.1rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    /* =========================================================
+       PAGE ENTRANCE + SCROLL REVEAL
+       ========================================================= */
+    main {
+      animation: pageFadeIn 0.45s ease both;
+    }
+
+    @keyframes pageFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .reveal-on-scroll {
+      opacity: 0;
+      transform: translateY(22px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .reveal-on-scroll.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .alert {
+      font-family: var(--font-body);
+      border-radius: var(--radius-md) !important;
+    }
+
+    /* =========================================================
+       FOOTER — the "convergence" route map signature
+       ========================================================= */
+    .site-footer {
+      margin-top: auto;
+      background: var(--primary-deep);
+      color: #D7E6DF;
+      position: relative;
+      overflow: hidden;
+      padding: 4rem 0 2rem;
+    }
+
+    .site-footer > .container {
+      position: relative;
+      z-index: 2;
+    }
+
+    .converge-map {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0.12;
+      pointer-events: none;
+      z-index: 1;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .converge-map svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .converge-line {
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      opacity: 0.15;
+    }
+
+    .converge-line.trunk {
+      stroke-width: 3;
+      opacity: 0.25;
+    }
+
+    .converge-line.r1 {
+      stroke: #9FD9C7;
+    }
+
+    .converge-line.r2 {
+      stroke: var(--accent);
+    }
+
+    .converge-line.r3 {
+      stroke: #7FB3CF;
+    }
+
+    .converge-line.trunk {
+      stroke: #EAF3EF;
+    }
+
+    .converge-node {
+      fill: var(--primary-deep);
+      stroke-width: 2.5;
+      animation: nodeBreathe 3s ease-in-out infinite;
+    }
+
+    .converge-node.n1 {
+      stroke: #9FD9C7;
+    }
+
+    .converge-node.n2 {
+      stroke: var(--accent);
+      animation-delay: .4s;
+    }
+
+    .converge-node.n3 {
+      stroke: #7FB3CF;
+      animation-delay: .8s;
+    }
+
+    .converge-node.hub {
+      stroke: #EAF3EF;
+      r: 7;
+      animation-delay: .2s;
+      fill: var(--accent);
+    }
+
+    @keyframes nodeBreathe {
+
+      0%,
+      100% {
+        r: 5;
+      }
+
+      50% {
+        r: 6.5;
+      }
+    }
+
+    /* Glowing Pulsing Cars traveling along the routes */
+    .pulse-car {
+      filter: url(#glow);
+      animation: travelRoute 7.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+
+    .pulse-car.p1 {
+      fill: #9FD9C7;
+      offset-path: path('M30,30 C220,30 300,72 480,75 L560,75 C700,75 760,35 960,32');
+      animation-delay: 0s;
+    }
+
+    .pulse-car.p2 {
+      fill: var(--accent);
+      offset-path: path('M30,75 C220,75 320,75 480,75 L560,75 C740,75 800,75 960,75');
+      animation-delay: 2.5s;
+    }
+
+    .pulse-car.p3 {
+      fill: #7FB3CF;
+      offset-path: path('M30,120 C220,120 300,78 480,75 L560,75 C700,75 780,115 960,118');
+      animation-delay: 5s;
+    }
+
+    @keyframes travelRoute {
+      0% {
+        offset-distance: 0%;
+        opacity: 0;
+      }
+
+      4% {
+        opacity: 1;
+      }
+
+      96% {
+        opacity: 1;
+      }
+
+      100% {
+        offset-distance: 100%;
+        opacity: 0;
+      }
+    }
+
+    .converge-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      fill: #A9C4B8;
+      letter-spacing: 0.05em;
+      font-weight: 500;
+    }
+
+    .footer-heading {
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    .footer-link {
+      color: #C2D7CD;
+      text-decoration: none;
+      display: block;
+      padding: 0.3rem 0;
+      font-size: 0.94rem;
+      transition: color 0.2s ease, padding-left 0.2s ease;
+    }
+
+    .footer-link:hover {
+      color: #fff;
+      padding-left: 4px;
+    }
+
+    .rider-strip {
+      display: flex;
+      align-items: center;
+      margin: 1rem 0 1.5rem;
+    }
+
+    .rider-strip img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--primary-deep);
+      margin-left: -10px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .rider-strip img:first-child {
+      margin-left: 0;
+    }
+
+    .rider-strip .rider-count {
+      margin-left: 0.7rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: #A9C4B8;
+    }
+
+    .newsletter-form input {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #fff;
+      border-radius: var(--radius-md) 0 0 var(--radius-md);
+    }
+
+    .newsletter-form input::placeholder {
+      color: #9DB8AC;
+    }
+
+    .newsletter-form input:focus {
+      background: rgba(255, 255, 255, 0.11);
+      color: #fff;
+      box-shadow: none;
+      border-color: var(--accent);
+    }
+
+    .newsletter-form button {
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      background: var(--accent);
+      border: 1px solid var(--accent);
+      color: var(--primary-deep);
+      font-weight: 600;
+      padding: 0.5rem 1.3rem;
+      transition: background 0.2s ease;
+    }
+
+    .newsletter-form button:hover {
+      background: var(--accent-deep);
+    }
+
+    .social-row a {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.07);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #D7E6DF;
+      margin-right: 0.5rem;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .social-row a:hover {
+      background: var(--accent);
+      color: var(--primary-deep);
+      transform: translateY(-3px);
+    }
+
+    .footer-bottom {
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 1.1rem 0;
+      font-size: 0.85rem;
+      color: #A9C4B8;
+    }
+
+    .footer-bottom a {
+      color: #C2D7CD;
+      text-decoration: none;
+    }
+
+    .footer-bottom a:hover {
+      color: #fff;
+    }
+
+    /* =========================================================
+       BACKWARD-COMPATIBLE UTILITY CLASSES
+       ========================================================= */
+    .bg-teal-light {
+      background-color: var(--primary-tint) !important;
+      color: var(--primary) !important;
+    }
+
+    .text-primary {
+      color: var(--primary) !important;
+    }
+
+    .text-accent {
+      color: var(--accent) !important;
+    }
+
+    .text-secondary {
+      color: var(--ink-muted) !important;
+    }
+
+    .badge-pill-custom {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border-radius: 999px;
+      letter-spacing: 0.02em;
+    }
+
+    .card-premium {
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 2px 8px -2px rgba(10, 74, 61, 0.08);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card-premium:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .btn-primary-custom {
+      background: var(--primary);
+      border: none;
+      color: #fff !important;
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .btn-primary-custom:hover {
+      background: var(--primary-deep);
+      color: #fff !important;
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .btn-accent-custom {
+      background: var(--accent);
+      border: none;
+      color: var(--primary-deep) !important;
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .btn-accent-custom:hover {
+      background: var(--accent-deep);
+      color: var(--primary-deep) !important;
+      transform: translateY(-2px);
+    }
+
+    .btn-outline-primary-custom {
+      border: 1.5px solid var(--primary);
+      color: var(--primary) !important;
+      background: transparent;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .btn-outline-primary-custom:hover {
+      background: var(--primary);
+      color: #fff !important;
+    }
+
+    .hover-shadow:hover {
+      box-shadow: var(--shadow-soft);
+    }
+
+    .transition-all {
+      transition: all 0.25s ease;
+    }
+
+    .tracking-wider {
+      letter-spacing: 0.08em;
+    }
+
+    /* Forms */
+    .form-control:focus,
+    .form-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 0.2rem rgba(15, 102, 83, 0.15);
+    }
+
+    .card-header {
+      background: var(--surface) !important;
+      border-bottom: 1px solid var(--hairline);
+    }
+
+    .btn-success {
+      background: var(--primary) !important;
+      border-color: var(--primary) !important;
+      color: #fff !important;
+    }
+
+    .btn-danger {
+      background: #D94F5C !important;
+      border-color: #D94F5C !important;
+      color: #fff !important;
+    }
+
+    .btn-warning {
+      background: var(--accent) !important;
+      border-color: var(--accent) !important;
+      color: var(--primary-deep) !important;
+    }
+
+    .card,
+    .card-body {
+      color: var(--ink);
+    }
+
+    label,
+    .form-label {
+      color: var(--ink);
+      font-weight: 500;
+    }
+
+    .form-control,
+    .form-select {
+      color: var(--ink);
+      border-color: var(--hairline);
+    }
+
+    .form-control::placeholder {
+      color: var(--ink-muted);
+    }
+
+    .btn-link {
+      color: var(--primary) !important;
+    }
+
+    .btn-link:hover {
+      color: var(--primary-deep) !important;
+    }
+
+    .dropdown-menu,
+    .modal-content {
+      color: var(--ink);
+      border-color: var(--hairline);
+    }
+
+    /* =========================================================
+       HEADER NAV BUTTONS — Advanced styled links with icons
+       ========================================================= */
+    .nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 600;
+      font-size: 0.88rem;
+      color: var(--ink) !important;
+      padding: 0.5rem 1rem;
+      border-radius: 10px;
+      text-decoration: none !important;
+      position: relative;
+      transition: color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+      white-space: nowrap !important;
+    }
+
+    .nav-btn i {
+      font-size: 0.82rem;
+      opacity: 0.7;
+      transition: opacity 0.2s ease;
+    }
+
+    .nav-btn:hover {
+      color: var(--primary-deep) !important;
+      background: var(--primary-tint);
+      transform: translateY(-1px);
+    }
+
+    .nav-btn:hover i {
+      opacity: 1;
+    }
+
+    .nav-btn.active {
+      color: var(--primary-deep) !important;
+      background: var(--primary-tint);
+      box-shadow: inset 0 -2px 0 0 var(--primary);
+    }
+
+    .nav-btn.active i {
+      opacity: 1;
+      color: var(--primary);
+    }
+
+    .admin-badge-btn {
+      color: var(--accent-deep) !important;
+      border: 1.5px solid rgba(232, 163, 61, 0.45) !important;
+      background: rgba(232, 163, 61, 0.05);
+      border-radius: 99px;
+      padding: 0.45rem 1rem !important;
+      font-weight: 700 !important;
+      margin-left: 0.25rem;
+    }
+    .admin-badge-btn i {
+      color: var(--accent-deep) !important;
+      opacity: 1 !important;
+    }
+    .admin-badge-btn:hover {
+      background: rgba(232, 163, 61, 0.12) !important;
+      border-color: var(--accent) !important;
+      color: var(--accent-deep) !important;
+    }
+    .admin-badge-btn.active {
+      background: var(--accent) !important;
+      border-color: var(--accent) !important;
+      color: #fff !important;
+      box-shadow: none !important;
+    }
+    .admin-badge-btn.active i {
+      color: #fff !important;
+    }
+
+    @media (max-width: 1399px) {
+      .nav-btn {
+        padding: 0.45rem 0.7rem !important;
+        font-size: 0.8rem !important;
+      }
+      .admin-badge-btn {
+        padding: 0.4rem 0.8rem !important;
+      }
+      .btn-commute-primary {
+        padding: 0.45rem 1rem !important;
+        font-size: 0.8rem !important;
+      }
+      .btn-commute-ghost {
+        padding: 0.42rem 0.9rem !important;
+        font-size: 0.8rem !important;
+      }
+      .brand-mark {
+        font-size: 1.25rem !important;
+      }
+    }
+
+    {% block extra_style %}{% endblock %}
+  </style>
+
   {% block extra_head %}{% endblock %}
 </head>
+
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
 
-  <!-- Navigation Bar -->
-  {% include '_navbar.html' %}
+  <!-- =========================================================
+       HEADER
+       ========================================================= -->
+  <header class="site-header" id="siteHeader" x-data="{ open:false }">
+    <nav class="navbar navbar-expand-lg navbar-commute">
+      <div class="container d-flex align-items-center justify-content-between">
 
-  <!-- Main Content -->
-  <main class="flex-grow-1 py-4">
-    <div class="container">
-      <!-- Django Messages / Toast Notification -->
-      {% if messages %}
-        <div class="row justify-content-center">
-          <div class="col-md-8">
-            {% for message in messages %}
-              <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-sm border-0 rounded-4 mb-3" role="alert">
-                <i class="fa-solid {% if message.tags == 'success' %}fa-circle-check text-success{% elif message.tags == 'error' %}fa-circle-exclamation text-danger{% else %}fa-circle-info text-primary{% endif %} me-2"></i>
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <a href="{% url 'splash' %}" class="brand-mark">
+          <svg width="32" height="24" viewBox="0 0 32 24" fill="none">
+            <path d="M2 4 C10 4, 12 12, 20 12" stroke="var(--route-blue)" stroke-width="2.4" fill="none" />
+            <path d="M2 20 C10 20, 12 12, 20 12" stroke="var(--accent)" stroke-width="2.4" fill="none" />
+            <path d="M20 12 L29 12" stroke="var(--primary)" stroke-width="2.4" fill="none" />
+            <circle class="merge-node" cx="20" cy="12" r="4" fill="var(--primary-deep)" stroke="var(--primary)"
+              stroke-width="1.6" />
+          </svg>
+          CommuteSync
+        </a>
+
+        <button class="navbar-toggler border-0" type="button" @click="open = !open" aria-label="Toggle navigation">
+          <i class="fa-solid fa-bars fs-4" style="color:var(--primary-deep)"></i>
+        </button>
+
+        <div class="d-none d-lg-flex align-items-center gap-1">
+          <a href="{% url 'splash' %}"
+            class="nav-btn {% if request.resolver_match.url_name == 'splash' %}active{% endif %}">
+            <i class="fa-solid fa-house"></i> Home
+          </a>
+          <a href="{% url 'find_ride' %}"
+            class="nav-btn {% if request.resolver_match.url_name == 'find_ride' %}active{% endif %}">
+            <i class="fa-solid fa-magnifying-glass"></i> Find a Ride
+          </a>
+          <a href="{% url 'offer_ride' %}"
+            class="nav-btn {% if request.resolver_match.url_name == 'offer_ride' %}active{% endif %}">
+            <i class="fa-solid fa-car-side"></i> Offer a Ride
+          </a>
+          <a href="{% url 'dashboard' %}"
+            class="nav-btn {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+            <i class="fa-solid fa-gauge-high"></i> Dashboard
+          </a>
+          {% if user.is_authenticated %}
+          <a href="{% url 'trips' %}"
+            class="nav-btn {% if request.resolver_match.url_name == 'trips' or request.resolver_match.url_name == 'trip_detail' or request.resolver_match.url_name == 'track_trip' %}active{% endif %}">
+            <i class="fa-solid fa-map-location-dot"></i> See My Trip
+          </a>
+           <a href="{% url 'wallet' %}"
+            class="nav-btn {% if request.resolver_match.url_name == 'wallet' %}active{% endif %}">
+            <i class="fa-solid fa-wallet"></i> Wallet
+          </a>
+          {% if user.role == 'ADMIN' or user.is_superuser %}
+          <a href="{% url 'admin_dashboard' %}"
+            class="nav-btn admin-badge-btn {% if 'admin-panel' in request.path %}active{% endif %}">
+            <i class="fa-solid fa-shield-halved"></i> Admin Panel
+          </a>
+          {% endif %}
+          {% endif %}
+        </div>
+
+        <div class="d-none d-lg-flex align-items-center gap-2">
+          {% if user.is_authenticated %}
+          <div class="dropdown d-inline-block">
+            <button class="icon-btn dropdown-toggle border-0" type="button" id="bellNotificationDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications" style="position: relative;">
+              <i class="fa-regular fa-bell"></i>
+              {% if unread_notification_count %}
+                <span class="badge-dot" style="background: var(--accent-deep); position: absolute; top: 6px; right: 7px; width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 0 2px var(--surface);"></span>
+              {% endif %}
+            </button>
+            
+            <div class="dropdown-menu dropdown-menu-end border-0 shadow-lg mt-2 p-0 rounded-4 overflow-hidden" aria-labelledby="bellNotificationDropdown" style="width: 320px; max-height: 400px; overflow-y: auto; z-index: 1050;">
+              <div class="text-white p-3 d-flex justify-content-between align-items-center" style="background: linear-gradient(90deg, var(--primary-deep) 0%, #083027 100%); border-bottom: 2px solid var(--accent);" id="notifications-header-row">
+                <span class="fw-bold"><i class="fa-solid fa-bell me-2"></i>Notifications</span>
+                {% if unread_notification_count %}
+                  <button type="button" class="btn btn-sm btn-light rounded-pill px-3 py-1 font-monospace" style="font-size: 0.75rem; font-weight: 700;" onclick="markAllNotificationsAsRead(event)">
+                    Mark all read
+                  </button>
+                {% endif %}
               </div>
-            {% endfor %}
+              
+              <div class="d-flex flex-column" id="notifications-dropdown-list">
+                {% if latest_notifications %}
+                  {% for n in latest_notifications %}
+                    <div class="p-3 border-bottom transition-all {% if not n.is_read %}bg-teal-light{% endif %}" style="font-size: 0.85rem;" onmouseover="this.style.backgroundColor='rgba(15, 107, 102, 0.05)'" onmouseout="this.style.backgroundColor='{% if not n.is_read %}var(--primary-tint){% else %}transparent{% endif %}'">
+                      <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-bold {% if not n.is_read %}text-primary{% else %}text-dark{% endif %}">{{ n.title }}</span>
+                        <small class="text-secondary" style="font-size: 0.7rem;">{{ n.created_at|timesince }} ago</small>
+                      </div>
+                      <p class="text-secondary mb-0" style="font-size: 0.8rem; line-height: 1.3;">{{ n.message }}</p>
+                      
+                      {% if n.target_url %}
+                        <div class="d-flex gap-2 mt-2 pt-2 border-top">
+                          <a href="{{ n.target_url }}" class="btn btn-sm btn-outline-primary-custom px-2.5 py-1 rounded-pill fw-semibold" style="font-size: 0.7rem; border: 1px solid var(--primary); color: var(--primary); text-decoration: none; display: inline-block;">
+                            <i class="fa-solid fa-eye me-1"></i> View Details
+                          </a>
+                          {% if "request" in n.target_url %}
+                            <form action="{{ n.target_url }}accept/" method="post" class="mb-0 d-inline-block">
+                              {% csrf_token %}
+                              <button type="submit" class="btn btn-sm btn-primary-custom px-2.5 py-1 rounded-pill fw-semibold" style="font-size: 0.7rem; background-color: var(--primary); border-color: var(--primary); color: white;">
+                                <i class="fa-solid fa-check me-1"></i> Accept Request
+                              </button>
+                            </form>
+                          {% endif %}
+                        </div>
+                      {% endif %}
+                    </div>
+                  {% endfor %}
+                {% else %}
+                  <div class="text-center py-4 text-secondary">
+                    <div class="opacity-30 mb-2" style="font-size: 1.8rem;"><i class="fa-solid fa-bell-slash"></i></div>
+                    <span class="small">No notifications yet.</span>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <a href="{% url 'profile' %}" class="btn-commute-ghost">
+            <i class="fa-solid fa-user me-1"></i> {{ user.first_name|default:user.username }}
+          </a>
+          
+          <form action="{% url 'logout' %}" method="post" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn-commute-primary border-0" style="cursor: pointer;">Log out</button>
+          </form>
+          {% else %}
+          <a href="{% url 'login' %}" class="btn-commute-ghost">Log in</a>
+          <a href="{% url 'signup' %}" class="btn-commute-primary">Get started</a>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Mobile menu -->
+      <div class="container d-lg-none" x-show="open" x-transition x-cloak>
+        <div class="d-flex flex-column gap-1 pt-2">
+          <a href="{% url 'splash' %}"
+            class="nav-btn {% if request.resolver_match.url_name == 'splash' %}active{% endif %}">
+            <i class="fa-solid fa-house"></i> Home
+          </a>
+          <a href="{% url 'find_ride' %}"
+            class="nav-btn {% if request.resolver_match.url_name == 'find_ride' %}active{% endif %}">
+            <i class="fa-solid fa-magnifying-glass"></i> Find a Ride
+          </a>
+          <a href="{% url 'offer_ride' %}"
+            class="nav-btn {% if request.resolver_match.url_name == 'offer_ride' %}active{% endif %}">
+            <i class="fa-solid fa-car-side"></i> Offer a Ride
+          </a>
+          <a href="{% url 'dashboard' %}"
+            class="nav-btn {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+            <i class="fa-solid fa-gauge-high"></i> Dashboard
+          </a>
+          {% if user.is_authenticated %}
+          <a href="{% url 'trips' %}"
+            class="nav-btn {% if request.resolver_match.url_name == 'trips' or request.resolver_match.url_name == 'trip_detail' or request.resolver_match.url_name == 'track_trip' %}active{% endif %}">
+            <i class="fa-solid fa-map-location-dot"></i> See My Trip
+          </a>
+           <a href="{% url 'wallet' %}"
+            class="nav-btn {% if request.resolver_match.url_name == 'wallet' %}active{% endif %}">
+            <i class="fa-solid fa-wallet"></i> Wallet
+          </a>
+          {% if user.role == 'ADMIN' or user.is_superuser %}
+          <a href="{% url 'admin_dashboard' %}"
+            class="nav-btn admin-badge-btn {% if 'admin-panel' in request.path %}active{% endif %}">
+            <i class="fa-solid fa-shield-halved"></i> Admin Panel
+          </a>
+          {% endif %}
+          {% endif %}
+          <hr class="my-2" style="border-color:var(--hairline)">
+          {% if user.is_authenticated %}
+          <a href="{% url 'profile' %}" class="btn-commute-ghost text-center">My profile</a>
+          <form action="{% url 'logout' %}" method="post" class="d-grid w-100">
+            {% csrf_token %}
+            <button type="submit" class="btn-commute-primary text-center border-0" style="cursor: pointer;">Log out</button>
+          </form>
+          {% else %}
+          <a href="{% url 'login' %}" class="btn-commute-ghost text-center">Log in</a>
+          <a href="{% url 'signup' %}" class="btn-commute-primary text-center">Get started</a>
+          {% endif %}
+        </div>
+      </div>
+    </nav>
+
+    <!-- Signature element: the merge ticker, a live feed of rides actually joining up -->
+    <div class="merge-ticker">
+      <div class="container ticker-row">
+        <span class="ticker-label"><i class="fa-solid fa-circle"></i> Just merged</span>
+        <div class="ticker-viewport">
+          <div class="merge-track" id="mergeTrack">
+            <!-- Data source: real recent matches and open passenger requests -->
+            <ul id="mergeData" class="d-none" aria-hidden="true">
+              {% for order in open_orders %}
+              <li data-time="{{ order.time }}" data-route="{{ order.route }}" data-seats="{{ order.seats_left }}" data-url="{{ order.target_url }}"></li>
+              {% endfor %}
+            </ul>
           </div>
         </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================================================
+       MAIN CONTENT
+       ========================================================= -->
+  <main class="flex-grow-1 py-4">
+    <div class="container">
+      {% if messages %}
+      <div class="row justify-content-center">
+        <div class="col-md-8">
+          {% for message in messages %}
+          <div
+            class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-sm border-0 mb-3"
+            role="alert">
+            <i
+              class="fa-solid {% if message.tags == 'success' %}fa-circle-check text-success{% elif message.tags == 'error' %}fa-circle-exclamation text-danger{% else %}fa-circle-info text-primary{% endif %} me-2"></i>
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
       {% endif %}
-      
+
       {% block content %}{% endblock %}
     </div>
   </main>
 
-  <!-- Footer -->
-  <footer class="bg-white border-top py-4 mt-auto">
-    <div class="container text-center">
-      <p class="mb-1 text-muted">&copy; 2026 CommuteSync Platform. All rights reserved.</p>
-      <small class="text-secondary"><i class="fa-solid fa-leaf text-success me-1"></i> Saving fuel, one shared ride at a time.</small>
+  <!-- =========================================================
+       FOOTER
+       ========================================================= -->
+  <footer class="site-footer">
+    <div class="converge-map">
+      <svg viewBox="0 0 1000 150" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3.5" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        <path class="converge-line r1" d="M30,30 C220,30 300,72 480,75" />
+        <path class="converge-line r2" d="M30,75 C220,75 320,75 480,75" />
+        <path class="converge-line r3" d="M30,120 C220,120 300,78 480,75" />
+        <path class="converge-line trunk" d="M480,75 L560,75" />
+        <path class="converge-line r1" d="M560,75 C700,75 760,35 960,32" />
+        <path class="converge-line r2" d="M560,75 C740,75 800,75 960,75" />
+        <path class="converge-line r3" d="M560,75 C700,75 780,115 960,118" />
+
+        <!-- Animated matching car pulses moving along the paths -->
+        <circle class="pulse-car p1" r="5" cx="0" cy="0" />
+        <circle class="pulse-car p2" r="5" cx="0" cy="0" />
+        <circle class="pulse-car p3" r="5" cx="0" cy="0" />
+
+        <circle class="converge-node n1" cx="30" cy="30" r="5" />
+        <circle class="converge-node n2" cx="30" cy="75" r="5" />
+        <circle class="converge-node n3" cx="30" cy="120" r="5" />
+        <circle class="converge-node hub" cx="520" cy="75" r="7" />
+        <circle class="converge-node n1" cx="960" cy="32" r="5" />
+        <circle class="converge-node n2" cx="960" cy="75" r="5" />
+        <circle class="converge-node n3" cx="960" cy="118" r="5" />
+
+        <text x="30" y="16" class="converge-label">Home districts</text>
+        <text x="520" y="98" class="converge-label" text-anchor="middle">One ride, matched</text>
+        <text x="960" y="18" class="converge-label" text-anchor="end">Business parks</text>
+      </svg>
+    </div>
+
+    <div class="container pb-4">
+      <div class="row gy-4">
+        <div class="col-lg-4">
+          <a href="{% url 'splash' %}" class="brand-mark" style="color:#fff !important;">
+            <svg width="32" height="24" viewBox="0 0 32 24" fill="none">
+              <path d="M2 4 C10 4, 12 12, 20 12" stroke="#9FD9C7" stroke-width="2.4" fill="none" />
+              <path d="M2 20 C10 20, 12 12, 20 12" stroke="var(--accent)" stroke-width="2.4" fill="none" />
+              <path d="M20 12 L29 12" stroke="#EAF3EF" stroke-width="2.4" fill="none" />
+              <circle cx="20" cy="12" r="4" fill="var(--primary-deep)" stroke="#EAF3EF" stroke-width="1.6" />
+            </svg>
+            CommuteSync
+          </a>
+          <p class="mt-3 mb-2" style="color:#C2D7CD; max-width:34ch;">
+            The route-matching platform that turns separate commutes into one shared ride.
+          </p>
+
+          <div class="rider-strip">
+            <img src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=100&q=70"
+              alt="Commuter who carpools with CommuteSync">
+            <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=100&q=70"
+              alt="Commuter who carpools with CommuteSync">
+            <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&q=70"
+              alt="Commuter who carpools with CommuteSync">
+            <span class="rider-count">+2,300 riders onboard</span>
+          </div>
+
+          <div class="social-row">
+            <a href="https://www.linkedin.com/feed/" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+            <a href="https://x.com/" aria-label="Twitter / X"><i class="fa-brands fa-x-twitter"></i></a>
+            <a href="https://www.instagram.com/" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+          </div>
+        </div>
+
+        <div class="col-6 col-lg-2">
+          <div class="footer-heading">Product</div>
+          <a href="{% url 'find_ride' %}" class="footer-link">Find a ride</a>
+          <a href="{% url 'offer_ride' %}" class="footer-link">Offer a ride</a>
+          <a href="{% url 'dashboard' %}" class="footer-link">Dashboard</a>
+        </div>
+
+        <div class="col-6 col-lg-2">
+          <div class="footer-heading">Company</div>
+          <a href="{% url 'about' %}" class="footer-link">About us</a>
+          <a href="{% url 'sustainability' %}" class="footer-link">Sustainability</a>
+          <a href="{% url 'contact' %}" class="footer-link">Contact</a>
+        </div>
+
+        <div class="col-lg-4">
+          <div class="footer-heading">Stay in the loop</div>
+          <p class="mb-3" style="color:#C2D7CD; font-size:0.92rem;">
+            Monthly notes on new routes, savings, and emissions avoided.
+          </p>
+          <form class="newsletter-form d-flex" method="post" action="#">
+            {% csrf_token %}
+            <input type="email" name="email" class="form-control" placeholder="you@company.com" required>
+            <button type="submit" class="btn">Subscribe</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div class="container d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span>&copy; {% now "Y" %} CommuteSync. All rights reserved.</span>
+        <div>
+          <a href="{% url 'privacy' %}" class="me-3">Privacy</a>
+          <a href="{% url 'terms' %}" class="me-3">Terms</a>
+          <a href="{% url 'accessibility' %}">Accessibility</a>
+        </div>
+      </div>
     </div>
   </footer>
 
   <!-- Bootstrap 5 Bundle JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  
+
   <!-- Leaflet JS for Maps -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <script>
+    function markAllNotificationsAsRead(event) {
+      event.stopPropagation(); // Prevent closing the dropdown
+      
+      const formData = new FormData();
+      formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+      
+      fetch("{% url 'mark_notifications_read' %}", {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          // Remove badge indicator dot
+          const badge = document.querySelector('.icon-btn .badge-dot');
+          if (badge) badge.remove();
+          
+          // Remove unread styling bg from all list items
+          const items = document.querySelectorAll('#notifications-dropdown-list > div');
+          items.forEach(el => {
+            el.classList.remove('bg-teal-light');
+          });
+          
+          // Remove the mark read button itself
+          const btn = event.target;
+          if (btn) btn.remove();
+        }
+      })
+      .catch(err => console.error("Error marking notifications read:", err));
+    }
+
+    function pollNotifications() {
+      fetch("{% url 'unread_notifications_api' %}")
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'success') {
+            const btn = document.getElementById('bellNotificationDropdown');
+            if (!btn) return;
+            
+            // 1. Update badge dot
+            let badge = btn.querySelector('.badge-dot');
+            if (data.unread_count > 0) {
+              if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'badge-dot';
+                badge.style.cssText = 'background: var(--accent-deep); position: absolute; top: 6px; right: 7px; width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 0 2px var(--surface);';
+                btn.appendChild(badge);
+              }
+            } else {
+              if (badge) badge.remove();
+            }
+            
+            // 2. Update list and mark all read button if dropdown is not open
+            const dropdown = document.querySelector('[aria-labelledby="bellNotificationDropdown"]');
+            if (dropdown && btn.getAttribute('aria-expanded') !== 'true') {
+              // Update "Mark all read" header button
+              const headerRow = dropdown.querySelector('#notifications-header-row') || dropdown.querySelector('.text-white.p-3');
+              if (headerRow) {
+                let markReadBtn = headerRow.querySelector('button');
+                if (data.unread_count > 0) {
+                  if (!markReadBtn) {
+                    markReadBtn = document.createElement('button');
+                    markReadBtn.type = 'button';
+                    markReadBtn.className = 'btn btn-sm btn-light rounded-pill px-3 py-1 font-monospace';
+                    markReadBtn.style.cssText = 'font-size: 0.75rem; font-weight: 700;';
+                    markReadBtn.innerText = 'Mark all read';
+                    markReadBtn.onclick = markAllNotificationsAsRead;
+                    headerRow.appendChild(markReadBtn);
+                  }
+                } else {
+                  if (markReadBtn) markReadBtn.remove();
+                }
+              }
+              
+              // Update items list
+              const list = document.getElementById('notifications-dropdown-list');
+              if (list) {
+                if (data.notifications.length > 0) {
+                  let html = '';
+                  data.notifications.forEach(n => {
+                    const bgClass = n.is_read ? 'transparent' : 'bg-teal-light';
+                    const titleColor = n.is_read ? 'text-dark' : 'text-primary';
+                    const hoverBg = n.is_read ? 'transparent' : 'var(--primary-tint)';
+                    html += `
+                      <div class="p-3 border-bottom transition-all ${bgClass}" style="font-size: 0.85rem;" onmouseover="this.style.backgroundColor='rgba(15, 107, 102, 0.05)'" onmouseout="this.style.backgroundColor='${hoverBg}'">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                          <span class="fw-bold ${titleColor}">${n.title}</span>
+                          <small class="text-secondary" style="font-size: 0.7rem;">Just now</small>
+                        </div>
+                        <p class="text-secondary mb-0" style="font-size: 0.8rem; line-height: 1.3;">${n.message}</p>
+                        ${n.target_url ? `
+                          <div class="d-flex gap-2 mt-2 pt-2 border-top">
+                            <a href="${n.target_url}" class="btn btn-sm btn-outline-primary-custom px-2.5 py-1 rounded-pill fw-semibold" style="font-size: 0.7rem; border: 1px solid var(--primary); color: var(--primary); text-decoration: none; display: inline-block;">
+                              <i class="fa-solid fa-eye me-1"></i> View Details
+                            </a>
+                            ${n.target_url.includes('request') ? `
+                              <form action="${n.target_url}accept/" method="post" class="mb-0 d-inline-block">
+                                <input type="hidden" name="csrfmiddlewaretoken" value="${document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : ''}">
+                                <button type="submit" class="btn btn-sm btn-primary-custom px-2.5 py-1 rounded-pill fw-semibold" style="font-size: 0.7rem; background-color: var(--primary); border-color: var(--primary); color: white;">
+                                  <i class="fa-solid fa-check me-1"></i> Accept Request
+                                </button>
+                              </form>
+                            ` : ''}
+                          </div>
+                        ` : ''}
+                      </div>
+                    `;
+                  });
+                  list.innerHTML = html;
+                } else {
+                  list.innerHTML = `
+                    <div class="text-center py-4 text-secondary">
+                      <div class="opacity-30 mb-2" style="font-size: 1.8rem;"><i class="fa-solid fa-bell-slash"></i></div>
+                      <span class="small">No notifications yet.</span>
+                    </div>
+                  `;
+                }
+              }
+            }
+          }
+        })
+        .catch(err => console.error("Error polling notifications:", err));
+    }
+    
+    {% if user.is_authenticated %}
+    setInterval(pollNotifications, 8000);
+    {% endif %}
+
+    // Header shadow on scroll
+    (function () {
+      var header = document.getElementById('siteHeader');
+      var onScroll = function () {
+        header.classList.toggle('is-scrolled', window.scrollY > 12);
+      };
+      document.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+
+    // Merge ticker: builds a seamless scrolling row from #mergeData
+    // (real context data if present, else the template's fallback samples).
+    // The list is duplicated once so the CSS animation can loop cleanly.
+    (function () {
+      var track = document.getElementById('mergeTrack');
+      var data = document.getElementById('mergeData');
+      if (!track || !data) return;
+      var entries = Array.prototype.slice.call(data.querySelectorAll('li'));
+      if (!entries.length) return;
+
+      var buildItem = function (entry) {
+        var time = entry.getAttribute('data-time') || '';
+        var route = entry.getAttribute('data-route') || '';
+        var seats = entry.getAttribute('data-seats') || '';
+        var url = entry.getAttribute('data-url') || '#';
+        
+        var item = document.createElement('a');
+        item.href = url;
+        item.className = 'merge-item text-decoration-none';
+        item.style.cursor = 'pointer';
+
+        var routeHTML = '';
+        if (route.indexOf('→') !== -1) {
+          var parts = route.split('→');
+          routeHTML = '<span class="route-from"><i class="fa-solid fa-location-dot route-icon"></i>' + parts[0].trim() + '</span>' +
+            '<i class="fa-solid fa-arrow-right-long route-arrow"></i>' +
+            '<span class="route-to">' + parts[1].trim() + '</span>';
+        } else if (route.indexOf('->') !== -1) {
+          var parts = route.split('->');
+          routeHTML = '<span class="route-from"><i class="fa-solid fa-location-dot route-icon"></i>' + parts[0].trim() + '</span>' +
+            '<i class="fa-solid fa-arrow-right-long route-arrow"></i>' +
+            '<span class="route-to">' + parts[1].trim() + '</span>';
+        } else {
+          routeHTML = '<i class="fa-solid fa-car-side route-icon"></i>' + route;
+        }
+
+        item.innerHTML =
+          '<span class="seg-time"><i class="fa-regular fa-clock me-1"></i>' + time + '</span>' +
+          '<span class="seg-route">' + routeHTML + '</span>' +
+          (seats ? '<span class="seg-seats"><i class="fa-solid fa-circle-user"></i>' + seats + ' seats left</span>' : '');
+        return item;
+      };
+
+      // Render the sequence twice back-to-back for a seamless -50% loop.
+      entries.concat(entries).forEach(function (entry) {
+        track.appendChild(buildItem(entry));
+      });
+    })();
+
+    // Scroll-reveal for elements marked .reveal-on-scroll
+    (function () {
+      var items = document.querySelectorAll('.reveal-on-scroll');
+      if (!('IntersectionObserver' in window) || !items.length) {
+        items.forEach(function (el) { el.classList.add('is-visible'); });
+        return;
+      }
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.15 });
+      items.forEach(function (el) { observer.observe(el); });
+    })();
+  </script>
+
   {% block extra_js %}{% endblock %}
 </body>
+
 </html>

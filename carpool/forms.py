@@ -2,34 +2,76 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from .models import Employee, Vehicle, Ride, SavedPlace, SystemConfig
 
-class EmployeeCreationForm(UserCreationForm):
-    employee_id = forms.CharField(max_length=50, required=True, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'EMP12345'}))
-    department = forms.CharField(max_length=100, required=True, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Engineering'}))
-    first_name = forms.CharField(max_length=50, required=True, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'John'}))
-    last_name = forms.CharField(max_length=50, required=True, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Doe'}))
-    email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'john.doe@company.com'}))
-    role = forms.ChoiceField(choices=Employee.ROLE_CHOICES, initial='EMPLOYEE', widget=forms.Select(attrs={'class': 'form-select'}))
+class EmployeeCreationForm(forms.ModelForm):
+    name = forms.CharField(max_length=100, required=True, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Name'}))
+    phone_number = forms.CharField(max_length=20, required=True, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Phone'}))
+    email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email / Mobile'}))
+    avatar = forms.CharField(required=False, widget=forms.HiddenInput(attrs={'id': 'id_avatar'}))
+    
+    password1 = forms.CharField(label='Password', widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Password'}))
+    password2 = forms.CharField(label='Confirm Password', widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Confirm Password'}))
 
-    class Meta(UserCreationForm.Meta):
+    class Meta:
         model = Employee
-        fields = UserCreationForm.Meta.fields + ('first_name', 'last_name', 'email', 'employee_id', 'department', 'role')
+        fields = ('name', 'phone_number', 'email', 'avatar')
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for field in self.fields.values():
-            if not isinstance(field.widget, forms.Select):
-                field.widget.attrs.update({'class': 'form-control'})
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if Employee.objects.filter(email=email).exists():
+            raise forms.ValidationError("An account with this email address already exists.")
+        return email
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password1 = cleaned_data.get("password1")
+        password2 = cleaned_data.get("password2")
+        if password1 and password2 and password1 != password2:
+            raise forms.ValidationError("Passwords do not match.")
+        return cleaned_data
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        email = self.cleaned_data['email']
+        user.email = email
+        
+        # Generate username from email
+        base_username = email.split('@')[0]
+        username = base_username
+        counter = 1
+        while Employee.objects.filter(username=username).exists():
+            username = f"{base_username}_{counter}"
+            counter += 1
+        user.username = username
+        
+        # Split name
+        name_parts = self.cleaned_data['name'].strip().split(' ', 1)
+        if len(name_parts) == 2:
+            user.first_name = name_parts[0]
+            user.last_name = name_parts[1]
+        else:
+            user.first_name = name_parts[0]
+            user.last_name = ''
+            
+        user.phone_number = self.cleaned_data['phone_number']
+        user.avatar = self.cleaned_data.get('avatar', '')
+        
+        # Set password
+        user.set_password(self.cleaned_data["password1"])
+        
+        if commit:
+            user.save()
+        return user
 
 class EmployeeProfileForm(forms.ModelForm):
     class Meta:
         model = Employee
-        fields = ['first_name', 'last_name', 'email', 'employee_id', 'department']
+        fields = ['first_name', 'last_name', 'email', 'daily_commute_time', 'avatar']
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
-            'employee_id': forms.TextInput(attrs={'class': 'form-control'}),
-            'department': forms.TextInput(attrs={'class': 'form-control'}),
+            'daily_commute_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'avatar': forms.HiddenInput(attrs={'id': 'id_avatar'}),
         }
 
 class VehicleForm(forms.ModelForm):

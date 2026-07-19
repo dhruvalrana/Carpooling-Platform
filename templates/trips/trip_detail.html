@@ -121,29 +121,51 @@
       <div class="row g-4 align-items-center">
         <!-- Driver Info -->
         <div class="col-sm-6">
-          <div class="d-flex align-items-center gap-3">
-            <div class="bg-teal-light text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 48px; height: 48px; font-size: 1.2rem;">
-              {{ trip.ride.driver.username|slice:":1"|upper }}
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-3">
+              {% if trip.ride.driver.avatar %}
+                <img src="{{ trip.ride.driver.avatar }}" class="rounded-circle" style="width: 48px; height: 48px; object-fit: cover;" alt="{{ trip.ride.driver.username }}">
+              {% else %}
+                <div class="bg-teal-light text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 48px; height: 48px; font-size: 1.2rem;">
+                  {{ trip.ride.driver.first_name|slice:":1"|upper }}{{ trip.ride.driver.last_name|slice:":1"|upper }}
+                </div>
+              {% endif %}
+              <div>
+                <small class="text-secondary d-block">Driver</small>
+                <div class="fw-bold text-dark">{{ trip.ride.driver.get_full_name|default:trip.ride.driver.username }}</div>
+                <small class="text-muted">{{ trip.ride.driver.phone_number|default:"No Phone Listed" }}</small>
+              </div>
             </div>
-            <div>
-              <small class="text-secondary d-block">Driver</small>
-              <div class="fw-bold text-dark">{{ trip.ride.driver.get_full_name|default:trip.ride.driver.username }}</div>
-              <small class="text-muted">{{ trip.ride.driver.department }}</small>
-            </div>
+            {% if trip.ride.driver.phone_number %}
+              <a href="tel:{{ trip.ride.driver.phone_number }}" class="btn btn-sm btn-outline-success rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;" title="Voice Call Driver">
+                <i class="fa-solid fa-phone"></i>
+              </a>
+            {% endif %}
           </div>
         </div>
         
         <!-- Passenger Info -->
         <div class="col-sm-6 border-start border-light-subtle">
-          <div class="d-flex align-items-center gap-3">
-            <div class="bg-wallet-light text-wallet rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 48px; height: 48px; font-size: 1.2rem;">
-              {{ trip.passenger.username|slice:":1"|upper }}
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-3">
+              {% if trip.passenger.avatar %}
+                <img src="{{ trip.passenger.avatar }}" class="rounded-circle" style="width: 48px; height: 48px; object-fit: cover;" alt="{{ trip.passenger.username }}">
+              {% else %}
+                <div class="bg-wallet-light text-wallet rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 48px; height: 48px; font-size: 1.2rem;">
+                  {{ trip.passenger.first_name|slice:":1"|upper }}{{ trip.passenger.last_name|slice:":1"|upper }}
+                </div>
+              {% endif %}
+              <div>
+                <small class="text-secondary d-block">Passenger</small>
+                <div class="fw-bold text-dark">{{ trip.passenger.get_full_name|default:trip.passenger.username }}</div>
+                <small class="text-muted">{{ trip.passenger.phone_number|default:"No Phone Listed" }}</small>
+              </div>
             </div>
-            <div>
-              <small class="text-secondary d-block">Passenger</small>
-              <div class="fw-bold text-dark">{{ trip.passenger.get_full_name|default:trip.passenger.username }}</div>
-              <small class="text-muted">{{ trip.passenger.department }}</small>
-            </div>
+            {% if trip.passenger.phone_number %}
+              <a href="tel:{{ trip.passenger.phone_number }}" class="btn btn-sm btn-outline-success rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;" title="Voice Call Passenger">
+                <i class="fa-solid fa-phone"></i>
+              </a>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -166,6 +188,14 @@
         {% if trip.status == 'BOOKED' %}
           <form action="{% url 'update_trip_status' trip.id %}" method="post">
             {% csrf_token %}
+            <div class="mb-3">
+              <label for="otp_code" class="form-label fw-semibold text-secondary small">Enter Passenger OTP</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light border-light-subtle rounded-start-4"><i class="fa-solid fa-key text-secondary"></i></span>
+                <input type="text" name="otp_code" id="otp_code" class="form-control border-light-subtle rounded-end-4 font-monospace" placeholder="e.g. 123456" required maxlength="6" style="letter-spacing: 0.1em; font-weight: 700; text-align: center;">
+              </div>
+              <small class="text-muted d-block mt-1">Ask the passenger for the 6-digit OTP code displayed on their screen.</small>
+            </div>
             <input type="hidden" name="status" value="STARTED">
             <button type="submit" class="btn btn-primary-custom w-100 py-3 rounded-4">
               <i class="fa-solid fa-play me-2"></i> Start Journey (Driver)
@@ -204,11 +234,12 @@
         {% endif %}
       {% else %}
         <!-- Passenger specific operations -->
-        {% if trip.status == 'STARTED' or trip.status == 'IN_PROGRESS' %}
-          <a href="{% url 'track_trip' trip.id %}" class="btn btn-accent-custom w-100 py-3 rounded-4">
+        {% if trip.status == 'BOOKED' or trip.status == 'STARTED' or trip.status == 'IN_PROGRESS' %}
+          <a href="{% url 'track_trip' trip.id %}" class="btn btn-accent-custom w-100 py-3 rounded-4 mb-3">
             <i class="fa-solid fa-location-crosshairs me-2"></i> Track Driver Location Live
           </a>
-        {% elif trip.status == 'PAYMENT_PENDING' or trip.status == 'COMPLETED' %}
+        {% endif %}
+        {% if trip.status == 'PAYMENT_PENDING' or trip.status == 'COMPLETED' %}
           <a href="{% url 'payment' trip.id %}" class="btn btn-accent-custom w-100 py-3 rounded-4">
             <i class="fa-solid fa-credit-card me-2"></i> Settle Commute Fare (₹{{ trip.fare_paid }})
           </a>
@@ -217,6 +248,11 @@
             <i class="fa-solid fa-circle-check me-1"></i> Fare Settle Complete. Thank you for commuting with CommuteSync!
           </div>
         {% else %}
+          <div class="alert border-0 rounded-4 mb-3 text-center" style="background-color: var(--primary-tint); color: var(--primary-deep);">
+            <div class="fw-bold mb-1" style="font-size: 0.88rem;"><i class="fa-solid fa-key me-2 text-accent"></i>Your Pickup Verification OTP</div>
+            <div class="display-6 font-monospace fw-bold tracking-wider my-2" style="color: var(--primary-deep); letter-spacing: 0.15em;">{{ trip.otp_code }}</div>
+            <small class="d-block text-secondary" style="font-size: 0.72rem;">Please share this 6-digit OTP with the driver only when they arrive at your pickup location to start the commute.</small>
+          </div>
           <div class="alert alert-light border rounded-4 mb-0 text-center text-muted">
             <i class="fa-solid fa-circle-info me-1"></i> Waiting for driver to start the journey.
           </div>
@@ -228,8 +264,7 @@
   <!-- Right Column: HTMX Chat Room -->
   <div class="col-lg-5">
     <div class="card card-premium p-0 border-0 bg-white shadow-sm overflow-hidden" style="height: 520px;">
-      <!-- hx polling to trigger chat messages get every 5 seconds -->
-      <div hx-get="{% url 'get_chat' trip.id %}" hx-trigger="every 5s" hx-swap="outerHTML">
+      <div id="chat-outer-wrapper">
         {% include 'trips/_chat_panel.html' %}
       </div>
     </div>

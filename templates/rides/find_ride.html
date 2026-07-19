@@ -16,6 +16,43 @@
     <div class="card card-premium p-4 shadow-sm border-0">
       <form method="get" action="{% url 'find_confirm' %}" @submit="validateForm($event)">
         
+        <!-- Vehicle Type Selection Buttons (Top) -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold text-secondary small d-block">Preferred Vehicle Type</label>
+          <input type="hidden" name="vehicle_type" :value="selectedVehicle">
+          <div class="d-flex gap-2">
+            <!-- Two Wheeler -->
+            <button type="button" class="btn flex-fill py-3 border rounded-4 d-flex flex-column align-items-center justify-content-center gap-1 transition"
+                    :class="selectedVehicle === 'TWO' ? 'btn-primary-custom text-white shadow-sm border-primary' : 'bg-light text-secondary border-light-subtle'"
+                    @click="selectedVehicle = 'TWO'" style="min-width: 0;">
+              <i class="fa-solid fa-motorcycle fs-4"></i>
+              <span style="font-size: 0.72rem; font-weight: 700;">Two-Wheeler</span>
+            </button>
+            
+            <!-- Three Wheeler -->
+            <button type="button" class="btn flex-fill py-3 border rounded-4 d-flex flex-column align-items-center justify-content-center gap-1 transition"
+                    :class="selectedVehicle === 'THREE' ? 'btn-primary-custom text-white shadow-sm border-primary' : 'bg-light text-secondary border-light-subtle'"
+                    @click="selectedVehicle = 'THREE'" style="min-width: 0;">
+              <svg viewBox="0 0 24 24" style="width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; margin-bottom: 2px;">
+                <rect x="4" y="4" width="16" height="12" rx="2" />
+                <path d="M6 8h12v4H6z" />
+                <circle cx="12" cy="19" r="2.5" fill="currentColor" />
+                <circle cx="12" cy="14" r="1" fill="currentColor" />
+                <path d="M9 14h1m4 0h1" />
+              </svg>
+              <span style="font-size: 0.72rem; font-weight: 700;">Three-Wheeler</span>
+            </button>
+            
+            <!-- Four Wheeler -->
+            <button type="button" class="btn flex-fill py-3 border rounded-4 d-flex flex-column align-items-center justify-content-center gap-1 transition"
+                    :class="selectedVehicle === 'FOUR' ? 'btn-primary-custom text-white shadow-sm border-primary' : 'bg-light text-secondary border-light-subtle'"
+                    @click="selectedVehicle = 'FOUR'" style="min-width: 0;">
+              <i class="fa-solid fa-car-side fs-4"></i>
+              <span style="font-size: 0.72rem; font-weight: 700;">Four-Wheeler</span>
+            </button>
+          </div>
+        </div>
+        
         <h5 class="fw-bold mb-3 text-primary"><span class="badge bg-teal-light text-primary me-2">1</span>Set Your Route</h5>
         
         <!-- Start Location (Pickup) -->
@@ -94,6 +131,20 @@
           <div class="form-text small text-muted">Specify how many seats you want to search for.</div>
         </div>
 
+        <!-- Departure Time -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold text-secondary small">Departure Time</label>
+          <div class="input-group">
+            <span class="input-group-text bg-light border-light-subtle rounded-start-4">
+              <i class="fa-regular fa-clock text-primary"></i>
+            </span>
+            <input type="datetime-local" name="departure_time" id="id_departure_time" required class="form-control rounded-end-4" style="font-size: 0.9rem;">
+          </div>
+          <div class="form-text small text-muted">Filter rides leaving at or after this time.</div>
+        </div>
+
+
+
         <!-- Quick Saved Places -->
         {% if saved_places %}
           <div class="mb-4">
@@ -117,7 +168,7 @@
           </div>
           <div class="d-flex justify-content-between">
             <span class="fw-semibold text-primary"><i class="fa-solid fa-money-bill-wave me-1"></i> Est. Ticket Fare:</span>
-            <span class="fw-bold text-accent" x-text="'₹' + (distance * 0.4).toFixed(2)"></span>
+            <span class="fw-bold text-accent" x-text="'₹' + (distance * (selectedVehicle === 'TWO' ? 5.0 : (selectedVehicle === 'THREE' ? 8.0 : 12.0))).toFixed(2)"></span>
           </div>
         </div>
 
@@ -150,13 +201,41 @@
 
 {% block extra_js %}
 <script>
+  window.setStartAndEndDestination = function(startLat, startLng, endName) {
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(endName)}&limit=1`, {
+      headers: { 'Accept-Language': 'en' }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lng = parseFloat(data[0].lon);
+        const cleanName = data[0].display_name.split(',').slice(0, 3).join(',');
+        
+        const el = document.querySelector('[x-data="rideSearcher()"]');
+        const searcher = Alpine.$data(el);
+        if (searcher) {
+          searcher.setEndPin(lat, lng, cleanName);
+          searcher.endQuery = cleanName;
+          searcher.drawRoute();
+          searcher.map.setView([lat, lng], 13);
+        }
+      }
+    })
+    .catch(err => console.error("Destination location search failed:", err));
+  };
+
   function rideSearcher() {
     return {
       map: null,
       startMarker: null,
       endMarker: null,
       routeLine: null,
+      routeShadowLine: null,
       distance: 0,
+      routeLoading: false,
+      nearbyMarkers: [],
+      selectedVehicle: 'FOUR',
       
       startQuery: '',
       endQuery: '',
@@ -175,6 +254,14 @@
         this.map.on('click', (e) => {
           this.handleMapClick(e.latlng.lat, e.latlng.lng);
         });
+
+        const dateInput = document.getElementById('id_departure_time');
+        if (dateInput) {
+          const localNow = new Date();
+          const tzOffset = localNow.getTimezoneOffset() * 60000;
+          const localISOTime = (new Date(localNow.getTime() - tzOffset)).toISOString().slice(0, 16);
+          dateInput.value = localISOTime;
+        }
       },
 
       searchLocations(query, field) {
@@ -296,36 +383,77 @@
       },
 
       setStartPin(lat, lng, name) {
-        const coralIcon = L.divIcon({
-          className: 'custom-div-icon',
-          html: `<div style="background-color: var(--color-accent); width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
-          iconSize: [14, 14],
-          iconAnchor: [7, 7]
+        const startIcon = L.divIcon({
+          className: '',
+          html: `<div style="position:relative; width:32px; height:42px;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 42" width="32" height="42">
+              <path d="M16 0 C7.163 0 0 7.163 0 16 C0 28 16 42 16 42 C16 42 32 28 32 16 C32 7.163 24.837 0 16 0 Z" fill="#FF5252" stroke="white" stroke-width="2"/>
+              <circle cx="16" cy="16" r="7" fill="white"/>
+            </svg>
+          </div>`,
+          iconSize: [32, 42],
+          iconAnchor: [16, 42],
+          popupAnchor: [0, -42]
         });
 
         if (this.startMarker) this.map.removeLayer(this.startMarker);
 
-        this.startMarker = L.marker([lat, lng], {icon: coralIcon}).addTo(this.map)
-          .bindPopup(name).openPopup();
+        this.startMarker = L.marker([lat, lng], {icon: startIcon, draggable: true}).addTo(this.map)
+          .bindPopup(`<b>🟢 Pickup</b><br>${name}`).openPopup();
+          
+        this.startMarker.on('dragend', (e) => {
+          const pos = e.target.getLatLng();
+          this.reverseGeocode(pos.lat, pos.lng, (address) => {
+            e.target.bindPopup(`<b>🟢 Pickup</b><br>${address}`).openPopup();
+            this.startQuery = address;
+            const startLatEl = document.getElementById('start_lat') || document.getElementById('id_start_lat');
+            const startLngEl = document.getElementById('start_lng') || document.getElementById('id_start_lng');
+            if (startLatEl) startLatEl.value = pos.lat.toFixed(6);
+            if (startLngEl) startLngEl.value = pos.lng.toFixed(6);
+            if (this.endMarker) this.drawRoute();
+            this.fetchNearbyRides(pos.lat, pos.lng);
+          });
+        });
         
         const startLatEl = document.getElementById('start_lat') || document.getElementById('id_start_lat');
         const startLngEl = document.getElementById('start_lng') || document.getElementById('id_start_lng');
         if (startLatEl) startLatEl.value = lat.toFixed(6);
         if (startLngEl) startLngEl.value = lng.toFixed(6);
+        
+        this.fetchNearbyRides(lat, lng);
       },
 
       setEndPin(lat, lng, name) {
-        const tealIcon = L.divIcon({
-          className: 'custom-div-icon',
-          html: `<div style="background-color: var(--color-primary); width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
-          iconSize: [14, 14],
-          iconAnchor: [7, 7]
+        const endIcon = L.divIcon({
+          className: '',
+          html: `<div style="position:relative; width:32px; height:42px;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 42" width="32" height="42">
+              <path d="M16 0 C7.163 0 0 7.163 0 16 C0 28 16 42 16 42 C16 42 32 28 32 16 C32 7.163 24.837 0 16 0 Z" fill="#1565C0" stroke="white" stroke-width="2"/>
+              <circle cx="16" cy="16" r="7" fill="white"/>
+            </svg>
+          </div>`,
+          iconSize: [32, 42],
+          iconAnchor: [16, 42],
+          popupAnchor: [0, -42]
         });
 
         if (this.endMarker) this.map.removeLayer(this.endMarker);
 
-        this.endMarker = L.marker([lat, lng], {icon: tealIcon}).addTo(this.map)
-          .bindPopup(name).openPopup();
+        this.endMarker = L.marker([lat, lng], {icon: endIcon, draggable: true}).addTo(this.map)
+          .bindPopup(`<b>🔵 Destination</b><br>${name}`).openPopup();
+          
+        this.endMarker.on('dragend', (e) => {
+          const pos = e.target.getLatLng();
+          this.reverseGeocode(pos.lat, pos.lng, (address) => {
+            e.target.bindPopup(`<b>🔵 Destination</b><br>${address}`).openPopup();
+            this.endQuery = address;
+            const endLatEl = document.getElementById('end_lat') || document.getElementById('id_end_lat');
+            const endLngEl = document.getElementById('end_lng') || document.getElementById('id_end_lng');
+            if (endLatEl) endLatEl.value = pos.lat.toFixed(6);
+            if (endLngEl) endLngEl.value = pos.lng.toFixed(6);
+            if (this.startMarker) this.drawRoute();
+          });
+        });
         
         const endLatEl = document.getElementById('end_lat') || document.getElementById('id_end_lat');
         const endLngEl = document.getElementById('end_lng') || document.getElementById('id_end_lng');
@@ -351,6 +479,7 @@
           if (this.startMarker) this.map.removeLayer(this.startMarker);
           this.startMarker = null;
           this.startQuery = '';
+          this.clearNearbyMarkers();
           const startLatEl = document.getElementById('start_lat') || document.getElementById('id_start_lat');
           const startLngEl = document.getElementById('start_lng') || document.getElementById('id_start_lng');
           if (startLatEl) startLatEl.value = '';
@@ -365,6 +494,10 @@
           if (endLngEl) endLngEl.value = '';
         }
         
+        if (this.routeShadowLine) {
+          this.map.removeLayer(this.routeShadowLine);
+          this.routeShadowLine = null;
+        }
         if (this.routeLine) {
           this.map.removeLayer(this.routeLine);
           this.routeLine = null;
@@ -374,40 +507,138 @@
 
       drawRoute() {
         if (!this.startMarker || !this.endMarker) return;
-        
+
         const p1 = this.startMarker.getLatLng();
         const p2 = this.endMarker.getLatLng();
-        
-        if (this.routeLine) {
-          this.map.removeLayer(this.routeLine);
-        }
-        
-        this.routeLine = L.polyline([p1, p2], {
-          color: 'var(--color-primary)', 
-          weight: 4,
-          dashArray: '5, 8'
-        }).addTo(this.map);
-        
-        this.map.fitBounds(this.routeLine.getBounds(), {padding: [50, 50]});
 
-        const lat1 = p1.lat;
-        const lon1 = p1.lng;
-        const lat2 = p2.lat;
-        const lon2 = p2.lng;
-        
-        const R = 6371; // km
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                  Math.sin(dLon/2) * Math.sin(dLon/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        this.distance = Math.round(R * c * 100) / 100;
+        // Remove old route layers
+        if (this.routeShadowLine) { this.map.removeLayer(this.routeShadowLine); this.routeShadowLine = null; }
+        if (this.routeLine) { this.map.removeLayer(this.routeLine); this.routeLine = null; }
+
+        // Show a straight placeholder while loading
+        this.routeShadowLine = L.polyline([p1, p2], {
+          color: '#aaa', weight: 3, dashArray: '4, 8', opacity: 0.5
+        }).addTo(this.map);
+        this.map.fitBounds(this.routeShadowLine.getBounds(), {padding: [60, 60]});
+
+        this.routeLoading = true;
+
+        // Fetch real road route from OSRM (free, no API key needed)
+        const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=full&geometries=geojson`;
+
+        fetch(url)
+          .then(res => res.json())
+          .then(data => {
+            this.routeLoading = false;
+
+            // Remove placeholder
+            if (this.routeShadowLine) { this.map.removeLayer(this.routeShadowLine); this.routeShadowLine = null; }
+
+            if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+              console.warn('OSRM routing failed, falling back to straight line');
+              this._drawStraightFallback(p1, p2);
+              return;
+            }
+
+            const route = data.routes[0];
+            const coords = route.geometry.coordinates.map(c => [c[1], c[0]]); // [lng,lat] → [lat,lng]
+
+            // White shadow/border line (Google Maps style)
+            this.routeShadowLine = L.polyline(coords, {
+              color: '#ffffff',
+              weight: 9,
+              opacity: 0.85,
+              lineJoin: 'round',
+              lineCap: 'round'
+            }).addTo(this.map);
+
+            // Main blue route line on top
+            this.routeLine = L.polyline(coords, {
+              color: '#1A73E8',
+              weight: 5,
+              opacity: 1,
+              lineJoin: 'round',
+              lineCap: 'round'
+            }).addTo(this.map);
+
+            this.map.fitBounds(this.routeLine.getBounds(), {padding: [60, 60]});
+
+            // Real road distance from OSRM
+            this.distance = Math.round(route.distance / 10) / 100; // metres → km
+          })
+          .catch(err => {
+            this.routeLoading = false;
+            console.error('OSRM fetch error:', err);
+            if (this.routeShadowLine) { this.map.removeLayer(this.routeShadowLine); this.routeShadowLine = null; }
+            this._drawStraightFallback(p1, p2);
+          });
+      },
+
+      _drawStraightFallback(p1, p2) {
+        const R = 6371;
+        const dLat = (p2.lat - p1.lat) * Math.PI / 180;
+        const dLon = (p2.lng - p1.lng) * Math.PI / 180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(p1.lat*Math.PI/180)*Math.cos(p2.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+        this.distance = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) * 100) / 100;
+
+        this.routeLine = L.polyline([p1, p2], {
+          color: '#1A73E8', weight: 4, dashArray: '6, 10', opacity: 0.75
+        }).addTo(this.map);
+        this.map.fitBounds(this.routeLine.getBounds(), {padding: [60, 60]});
       },
 
       resetPins() {
         this.clearField('start');
         this.clearField('end');
+        this.clearNearbyMarkers();
+      },
+      
+      clearNearbyMarkers() {
+        this.nearbyMarkers.forEach(marker => {
+          this.map.removeLayer(marker);
+        });
+        this.nearbyMarkers = [];
+      },
+      
+      fetchNearbyRides(lat, lng) {
+        this.clearNearbyMarkers();
+        
+        fetch(`/rides/nearby-api/?lat=${lat}&lng=${lng}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.rides && data.rides.length > 0) {
+              data.rides.forEach(ride => {
+                const carMarkerIcon = L.divIcon({
+                  className: 'custom-div-icon',
+                  html: `<div style="background-color: #ffffff; border: 2.5px solid var(--primary); color: var(--primary); width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(0,0,0,0.2); transition: transform 0.2s ease;"><i class="fa-solid fa-car-side" style="font-size: 0.9rem;"></i></div>`,
+                  iconSize: [34, 34],
+                  iconAnchor: [17, 17]
+                });
+                
+                const popupContent = `
+                  <div style="font-family: var(--font-body); min-width: 170px; padding: 2px;">
+                    <div style="font-weight: 700; color: var(--primary-deep); margin-bottom: 2px;">Nearby Ride Match</div>
+                    <div style="font-size: 0.78rem; margin-bottom: 6px; line-height: 1.35;">
+                      <strong>Driver:</strong> ${ride.driver_name}<br>
+                      <strong>Departs:</strong> ${ride.time}<br>
+                      <strong>Seats:</strong> ${ride.seats_available} left<br>
+                      <strong>To:</strong> ${ride.end_name}
+                    </div>
+                    <button type="button" class="btn btn-sm btn-primary-custom w-100 py-1" style="font-size: 0.7rem; border-radius: 4px;" onclick="window.setStartAndEndDestination(${ride.start_lat}, ${ride.start_lng}, '${ride.end_name.replace(/'/g, "\\'")}')">
+                      Select Destination
+                    </button>
+                  </div>
+                `;
+                
+                const marker = L.marker([ride.start_lat, ride.start_lng], {icon: carMarkerIcon})
+                  .addTo(this.map)
+                  .bindPopup(popupContent);
+                
+                this.nearbyMarkers.push(marker);
+              });
+            }
+          })
+          .catch(err => console.error("Error fetching nearby rides:", err));
       },
 
       async validateForm(e) {

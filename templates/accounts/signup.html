@@ -3,15 +3,112 @@
 {% block title %}Sign Up — CommuteSync{% endblock %}
 
 {% block content %}
+<style>
+  .signup-card {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+    padding: 3rem;
+  }
+  .input-group-custom {
+    transition: all 0.3s ease;
+  }
+  .input-group-custom:focus-within {
+    box-shadow: 0 0 0 3.5px rgba(232, 163, 61, 0.18);
+  }
+  .input-group-custom .form-control {
+    border-left: none;
+    font-size: 0.95rem;
+    padding: 0.75rem 1rem;
+  }
+  .input-group-custom .form-control:focus {
+    box-shadow: none;
+    border-color: #ced4da;
+  }
+  .input-group-custom .input-group-text {
+    background-color: #f8f9fa;
+    border-right: none;
+    color: #8c9b94;
+    font-size: 1.05rem;
+    padding-left: 1.1rem;
+    padding-right: 0.6rem;
+    transition: color 0.3s ease, background-color 0.3s ease;
+  }
+  .input-group-custom:focus-within .input-group-text {
+    color: var(--primary);
+    background-color: #fff;
+    border-color: #ced4da;
+  }
+  .input-group-custom:focus-within .form-control {
+    border-color: #ced4da;
+  }
+  .avatar-upload-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+  .avatar-upload-container:hover {
+    transform: scale(1.03);
+  }
+  .avatar-upload-preview {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    border: 3px solid var(--hairline);
+    background-color: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-deep);
+    font-size: 2.5rem;
+    box-shadow: var(--shadow-lift);
+    overflow: hidden;
+    transition: border-color 0.2s ease;
+  }
+  .avatar-upload-container:hover .avatar-upload-preview {
+    border-color: var(--accent);
+  }
+  .avatar-upload-label {
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--primary-deep);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  
+  /* Curated avatar modal list styles */
+  .avatar-gallery-item {
+    border: 2px solid transparent;
+    border-radius: 50%;
+    padding: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .avatar-gallery-item:hover {
+    transform: translateY(-3px);
+    border-color: var(--primary);
+  }
+  .avatar-gallery-item.selected {
+    border-color: var(--accent) !important;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(232, 163, 61, 0.25);
+  }
+</style>
+
 <div class="row justify-content-center py-4">
-  <div class="col-md-7 col-lg-6">
-    <div class="card card-premium p-4 p-md-5 shadow-sm border-0">
+  <div class="col-md-10 col-lg-8">
+    <div class="signup-card">
       <div class="text-center mb-4">
-        <div class="d-inline-flex align-items-center justify-content-center bg-teal-light text-primary rounded-circle mb-3" style="width: 64px; height: 64px;">
-          <i class="fa-solid fa-user-plus fs-3"></i>
-        </div>
-        <h2 class="fw-bold mb-1">Create Account</h2>
-        <p class="text-secondary">Register as a company employee to join the pool</p>
+        <h2 class="fw-bold mb-1 text-primary-deep">Create Account</h2>
+        <p class="text-secondary small">Join CommuteSync to start carpooling with colleagues</p>
       </div>
 
       <form method="post" action="{% url 'signup' %}" class="needs-validation" novalidate>
@@ -29,85 +126,89 @@
           </div>
         {% endif %}
 
-        <div class="row">
-          <div class="col-sm-6 mb-3">
-            <label for="id_first_name" class="form-label fw-semibold text-secondary small">First Name</label>
-            {{ form.first_name }}
-            {% if form.first_name.errors %}
-              <div class="text-danger small mt-1">{% for error in form.first_name.errors %}{{ error }}{% endfor %}</div>
-            {% endif %}
+        <!-- Hidden input for avatar -->
+        {{ form.avatar }}
+
+        <div class="row g-4 align-items-center">
+          <!-- Fields column -->
+          <div class="col-md-8">
+            <!-- Name field -->
+            <div class="mb-3">
+              <div class="input-group input-group-custom rounded-3 overflow-hidden shadow-sm">
+                <span class="input-group-text"><i class="fa-regular fa-user"></i></span>
+                {{ form.name }}
+              </div>
+              {% if form.name.errors %}
+                <div class="text-danger small mt-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>{{ form.name.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Phone field -->
+            <div class="mb-3">
+              <div class="input-group input-group-custom rounded-3 overflow-hidden shadow-sm">
+                <span class="input-group-text"><i class="fa-solid fa-phone"></i></span>
+                {{ form.phone_number }}
+              </div>
+              {% if form.phone_number.errors %}
+                <div class="text-danger small mt-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>{{ form.phone_number.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Email field -->
+            <div class="mb-3">
+              <div class="input-group input-group-custom rounded-3 overflow-hidden shadow-sm">
+                <span class="input-group-text"><i class="fa-regular fa-envelope"></i></span>
+                {{ form.email }}
+              </div>
+              {% if form.email.errors %}
+                <div class="text-danger small mt-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>{{ form.email.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Password field -->
+            <div class="mb-3">
+              <div class="input-group input-group-custom rounded-3 overflow-hidden shadow-sm">
+                <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                {{ form.password1 }}
+              </div>
+              {% if form.password1.errors %}
+                <div class="text-danger small mt-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>{{ form.password1.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Confirm Password field -->
+            <div class="mb-3">
+              <div class="input-group input-group-custom rounded-3 overflow-hidden shadow-sm">
+                <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                {{ form.password2 }}
+              </div>
+              {% if form.password2.errors %}
+                <div class="text-danger small mt-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>{{ form.password2.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <button type="submit" class="btn btn-primary-custom w-100 py-3 mt-3 rounded-4 fw-semibold text-uppercase letter-spacing-1">
+              <i class="fa-solid fa-user-plus me-2"></i> Sign Up
+            </button>
           </div>
-          <div class="col-sm-6 mb-3">
-            <label for="id_last_name" class="form-label fw-semibold text-secondary small">Last Name</label>
-            {{ form.last_name }}
-            {% if form.last_name.errors %}
-              <div class="text-danger small mt-1">{% for error in form.last_name.errors %}{{ error }}{% endfor %}</div>
-            {% endif %}
+
+          <!-- Avatar upload column -->
+          <div class="col-md-4 text-center border-start border-light-subtle d-flex flex-column align-items-center justify-content-center py-3">
+            <div class="avatar-upload-container" data-bs-toggle="modal" data-bs-target="#avatarModal" title="Choose Profile Avatar">
+              <div class="avatar-upload-preview" id="avatar-preview-box">
+                <!-- Fallback user icon or chosen avatar -->
+                <i class="fa-regular fa-user" id="avatar-fallback-icon"></i>
+                <img id="avatar-img-preview" class="w-100 h-100 d-none" style="object-fit: cover;" alt="Avatar Preview">
+              </div>
+              <div class="avatar-upload-label">
+                <i class="fa-solid fa-camera"></i> Upload
+              </div>
+            </div>
+            <p class="text-muted small mt-3 mb-0" style="max-width: 180px; font-size: 0.78rem; line-height: 1.3;">
+              Choose an eco-commute avatar or custom seed character.
+            </p>
           </div>
         </div>
-
-        <div class="mb-3">
-          <label for="id_username" class="form-label fw-semibold text-secondary small">Username</label>
-          {{ form.username }}
-          <div class="form-text text-muted" style="font-size: 0.75rem;">Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.</div>
-          {% if form.username.errors %}
-            <div class="text-danger small mt-1">{% for error in form.username.errors %}{{ error }}{% endfor %}</div>
-          {% endif %}
-        </div>
-
-        <div class="mb-3">
-          <label for="id_email" class="form-label fw-semibold text-secondary small">Corporate Email Address</label>
-          {{ form.email }}
-          {% if form.email.errors %}
-            <div class="text-danger small mt-1">{% for error in form.email.errors %}{{ error }}{% endfor %}</div>
-          {% endif %}
-        </div>
-
-        <div class="row">
-          <div class="col-sm-6 mb-3">
-            <label for="id_employee_id" class="form-label fw-semibold text-secondary small">Employee ID</label>
-            {{ form.employee_id }}
-            {% if form.employee_id.errors %}
-              <div class="text-danger small mt-1">{% for error in form.employee_id.errors %}{{ error }}{% endfor %}</div>
-            {% endif %}
-          </div>
-          <div class="col-sm-6 mb-3">
-            <label for="id_department" class="form-label fw-semibold text-secondary small">Department</label>
-            {{ form.department }}
-            {% if form.department.errors %}
-              <div class="text-danger small mt-1">{% for error in form.department.errors %}{{ error }}{% endfor %}</div>
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="mb-3">
-          <label for="id_role" class="form-label fw-semibold text-secondary small">Select Role</label>
-          {{ form.role }}
-          {% if form.role.errors %}
-            <div class="text-danger small mt-1">{% for error in form.role.errors %}{{ error }}{% endfor %}</div>
-          {% endif %}
-        </div>
-
-        <div class="row">
-          <div class="col-sm-6 mb-3">
-            <label for="id_password1" class="form-label fw-semibold text-secondary small">Password</label>
-            <input type="password" name="password1" id="id_password1" class="form-control" required placeholder="••••••••">
-            {% if form.password1.errors %}
-              <div class="text-danger small mt-1">{% for error in form.password1.errors %}{{ error }}{% endfor %}</div>
-            {% endif %}
-          </div>
-          <div class="col-sm-6 mb-3">
-            <label for="id_password2" class="form-label fw-semibold text-secondary small">Confirm Password</label>
-            <input type="password" name="password2" id="id_password2" class="form-control" required placeholder="••••••••">
-            {% if form.password2.errors %}
-              <div class="text-danger small mt-1">{% for error in form.password2.errors %}{{ error }}{% endfor %}</div>
-            {% endif %}
-          </div>
-        </div>
-
-        <button type="submit" class="btn btn-primary-custom w-100 py-3 mt-3 rounded-4">
-          <i class="fa-solid fa-user-plus me-2"></i> Create Account
-        </button>
       </form>
 
       <div class="text-center mt-4 pt-3 border-top border-light-subtle">
@@ -117,4 +218,207 @@
     </div>
   </div>
 </div>
+
+<!-- Avatar Selection Modal -->
+<div class="modal fade" id="avatarModal" tabindex="-1" aria-labelledby="avatarModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow-lg">
+      <div class="modal-header border-0 bg-primary-deep text-white p-4">
+        <h5 class="modal-title fw-bold text-white modal-title-custom" id="avatarModalLabel">
+          <i class="fa-solid fa-face-smile me-2 text-accent"></i>Customize Profile Avatar
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <!-- Current Avatar Section -->
+        <div class="text-center mb-4 bg-light p-3 rounded-4 border border-1 border-dashed">
+          <div class="text-secondary small fw-bold uppercase tracking-wider mb-2">Current Avatar</div>
+          <div id="modal-current-avatar-container" class="mx-auto" style="width: 90px; height: 90px;">
+            <!-- Render current preview inside modal -->
+          </div>
+        </div>
+
+        <!-- Add from Gallery Section -->
+        <div class="mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="text-secondary small fw-bold uppercase tracking-wider"><i class="fa-solid fa-images me-1 text-accent"></i>Select From Gallery</span>
+            <!-- Custom seed generator option -->
+            <button type="button" class="btn btn-sm btn-link text-primary-deep text-decoration-none fw-bold" id="btn-custom-seed" style="font-size: 0.8rem;">
+              <i class="fa-solid fa-wand-magic-sparkles me-1 text-accent"></i>Custom Seed
+            </button>
+          </div>
+          
+          <!-- Custom seed input block (hidden by default) -->
+          <div class="input-group mb-3 d-none" id="custom-seed-block">
+            <input type="text" class="form-control" id="custom-seed-input" placeholder="Type name (e.g. EcoRider)">
+            <button class="btn btn-primary-custom" type="button" id="btn-apply-custom-seed">Generate</button>
+          </div>
+
+          <div class="row g-3 row-cols-4" id="gallery-grid">
+            <!-- 8 Curated avatars -->
+          </div>
+        </div>
+
+        <!-- Control Action: Delete -->
+        <div class="border-top pt-3 text-center">
+          <button type="button" class="btn btn-outline-danger btn-sm px-4 py-2 rounded-pill fw-semibold" id="btn-delete-avatar">
+            <i class="fa-solid fa-trash-can me-2"></i>Delete Avatar & Reset
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light p-3">
+        <button type="button" class="btn btn-outline-secondary px-4 py-2.5 rounded-3 fw-semibold" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary-custom px-4 py-2.5 rounded-3 fw-semibold" id="btn-save-avatar-modal">Apply Avatar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var hiddenAvatarInput = document.getElementById('id_avatar');
+    var avatarPreviewBox = document.getElementById('avatar-preview-box');
+    var avatarFallbackIcon = document.getElementById('avatar-fallback-icon');
+    var avatarImgPreview = document.getElementById('avatar-img-preview');
+    var avatarModalEl = document.getElementById('avatarModal');
+
+    // Move modal to body to avoid backdrop layering issues
+    if (avatarModalEl) {
+      document.body.appendChild(avatarModalEl);
+    }
+    
+    // Curated gallery seeds
+    var gallerySeeds = ['Aneka', 'Felix', 'John', 'Kiki', 'Max', 'Harley', 'Sasha', 'Buddy'];
+    var galleryGrid = document.getElementById('gallery-grid');
+    var modalCurrentContainer = document.getElementById('modal-current-avatar-container');
+    
+    var localAvatarUrl = hiddenAvatarInput.value || '';
+    
+    // Renders the preview inside the modal
+    function renderModalCurrent() {
+      modalCurrentContainer.innerHTML = '';
+      if (localAvatarUrl) {
+        var img = document.createElement('img');
+        img.src = localAvatarUrl;
+        img.className = 'w-100 h-100 rounded-circle border border-3 border-white shadow-sm';
+        img.style.objectFit = 'cover';
+        modalCurrentContainer.appendChild(img);
+      } else {
+        var div = document.createElement('div');
+        div.className = 'w-100 h-100 rounded-circle border border-3 border-white shadow-sm d-flex align-items-center justify-content-center fw-bold';
+        div.style.background = 'linear-gradient(135deg, var(--accent) 0%, #D4AF37 100%)';
+        div.style.color = 'var(--primary-deep)';
+        div.style.fontSize = '1.8rem';
+        div.innerText = 'CS';
+        modalCurrentContainer.appendChild(div);
+      }
+    }
+    
+    // Populate the gallery grid
+    function buildGallery() {
+      galleryGrid.innerHTML = '';
+      gallerySeeds.forEach(function(seed) {
+        var col = document.createElement('div');
+        col.className = 'col text-center';
+        
+        var avatarUrl = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + seed;
+        
+        var wrapper = document.createElement('div');
+        wrapper.className = 'avatar-gallery-item';
+        if (localAvatarUrl === avatarUrl) {
+          wrapper.classList.add('selected');
+        }
+        
+        var img = document.createElement('img');
+        img.src = avatarUrl;
+        img.className = 'w-100 rounded-circle bg-light';
+        img.style.aspectRatio = '1/1';
+        img.style.objectFit = 'cover';
+        
+        wrapper.appendChild(img);
+        
+        wrapper.addEventListener('click', function() {
+          localAvatarUrl = avatarUrl;
+          
+          var items = galleryGrid.querySelectorAll('.avatar-gallery-item');
+          items.forEach(function(item) {
+            item.classList.remove('selected');
+          });
+          
+          wrapper.classList.add('selected');
+          renderModalCurrent();
+        });
+        
+        col.appendChild(wrapper);
+        galleryGrid.appendChild(col);
+      });
+    }
+
+    // Modal Events
+    avatarModalEl.addEventListener('show.bs.modal', function () {
+      localAvatarUrl = hiddenAvatarInput.value || '';
+      renderModalCurrent();
+      buildGallery();
+    });
+    
+    // Toggle Custom Seed Block
+    var btnCustomSeed = document.getElementById('btn-custom-seed');
+    var customSeedBlock = document.getElementById('custom-seed-block');
+    btnCustomSeed.addEventListener('click', function() {
+      customSeedBlock.classList.toggle('d-none');
+    });
+    
+    // Apply custom seed Dicebear generation
+    var btnApplyCustomSeed = document.getElementById('btn-apply-custom-seed');
+    var customSeedInput = document.getElementById('custom-seed-input');
+    btnApplyCustomSeed.addEventListener('click', function() {
+      var seedVal = customSeedInput.value.trim();
+      if (seedVal) {
+        var customUrl = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(seedVal);
+        localAvatarUrl = customUrl;
+        renderModalCurrent();
+        customSeedInput.value = '';
+        customSeedBlock.classList.add('d-none');
+        
+        var items = galleryGrid.querySelectorAll('.avatar-gallery-item');
+        items.forEach(function(item) {
+          item.classList.remove('selected');
+        });
+      }
+    });
+    
+    // Delete Avatar
+    var btnDeleteAvatar = document.getElementById('btn-delete-avatar');
+    btnDeleteAvatar.addEventListener('click', function() {
+      localAvatarUrl = '';
+      renderModalCurrent();
+      
+      var items = galleryGrid.querySelectorAll('.avatar-gallery-item');
+      items.forEach(function(item) {
+        item.classList.remove('selected');
+      });
+    });
+    
+    // Apply Avatar Selection and Save to Hidden Input
+    var btnSaveAvatarModal = document.getElementById('btn-save-avatar-modal');
+    btnSaveAvatarModal.addEventListener('click', function() {
+      hiddenAvatarInput.value = localAvatarUrl;
+      
+      if (localAvatarUrl) {
+        avatarFallbackIcon.classList.add('d-none');
+        avatarImgPreview.src = localAvatarUrl;
+        avatarImgPreview.classList.remove('d-none');
+      } else {
+        avatarImgPreview.classList.add('d-none');
+        avatarFallbackIcon.classList.remove('d-none');
+      }
+      
+      var modal = bootstrap.Modal.getInstance(avatarModalEl);
+      if (!modal) {
+        modal = new bootstrap.Modal(avatarModalEl);
+      }
+      modal.hide();
+    });
+  });
+</script>
 {% endblock %}

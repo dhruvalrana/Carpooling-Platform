@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from decimal import Decimal
 from datetime import datetime, timedelta
 from django.utils import timezone
-from .models import Employee, Vehicle, Ride, Trip, Transaction, SystemConfig
+from .models import Employee, Vehicle, Ride, Trip, Transaction, SystemConfig, RideRequest
 
 class CarpoolTestCase(TestCase):
     def setUp(self):
@@ -98,3 +98,154 @@ class CarpoolTestCase(TestCase):
         self.assertEqual(ride.seats_available, 2)
         self.assertEqual(trip.fare_paid, Decimal("15.00"))
         self.assertEqual(Transaction.objects.filter(employee=self.passenger).count(), 1)
+
+    def test_ride_request_and_matching(self):
+        from .models import RideRequest
+        
+        # 1. Create a ride request
+        req = RideRequest.objects.create(
+            passenger=self.passenger,
+            start_point_name="A",
+            start_lat=Decimal("37.0"),
+            start_lng=Decimal("-122.0"),
+            end_point_name="B",
+            end_lat=Decimal("37.1"),
+            end_lng=Decimal("-122.1"),
+            seats=1,
+            vehicle_type="FOUR",
+            estimated_price=Decimal("20.00"),
+            status="PENDING"
+        )
+        
+        self.assertEqual(req.status, "PENDING")
+        
+        # 2. Driver accepts request
+        self.client.force_login(self.driver)
+        response = self.client.post(f'/rides/request/{req.id}/accept/')
+        
+        # Verify redirect
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify request status changed
+        req.refresh_from_db()
+        self.assertEqual(req.status, "ACCEPTED")
+        
+        # Verify matching Ride and Trip created
+        self.assertTrue(Ride.objects.filter(driver=self.driver, end_point_name="B").exists())
+        trip = Trip.objects.filter(passenger=self.passenger, fare_paid=Decimal("20.00")).first()
+        self.assertIsNotNone(trip)
+        self.assertIsNotNone(trip.otp_code)
+        self.assertEqual(len(trip.otp_code), 6)
+        
+        # 3. Try to start the trip with an invalid OTP code
+        response = self.client.post(f'/trips/{trip.id}/update-status/', {
+            'status': 'STARTED',
+            'otp_code': '999999'
+        })
+        self.assertEqual(response.status_code, 302)
+        trip.refresh_from_db()
+        self.assertEqual(trip.status, "BOOKED")
+        
+        # 4. Start the trip with the correct OTP code
+        response = self.client.post(f'/trips/{trip.id}/update-status/', {
+            'status': 'STARTED',
+            'otp_code': trip.otp_code
+        })
+        self.assertEqual(response.status_code, 302)
+        trip.refresh_from_db()
+        self.assertEqual(trip.status, "STARTED")
+
+    def test_ride_offer_management(self):
+        # Create published ride
+        departure = timezone.now() + timedelta(hours=5)
+        ride = Ride.objects.create(
+            driver=self.driver,
+            vehicle=self.vehicle,
+            start_point_name="A",
+            end_point_name="B",
+            start_lat=Decimal("37.0"),
+            start_lng=Decimal("-122.0"),
+            end_lat=Decimal("37.1"),
+            end_lng=Decimal("-122.1"),
+            departure_time=departure,
+            total_seats=3,
+            seats_available=3,
+            fare_per_seat=Decimal("15.00"),
+            status="PUBLISHED"
+        )
+        
+        self.client.force_login(self.driver)
+        
+        # 1. Update ride offer
+        response = self.client.post(f'/rides/offer/{ride.id}/update/', {
+            'seats_available': 4,
+            'departure_time': (departure + timedelta(hours=1)).isoformat()
+        })
+        self.assertEqual(response.status_code, 302)
+        ride.refresh_from_db()
+        self.assertEqual(ride.seats_available, 4)
+        
+        # 2. Cancel/Disable ride offer
+        response = self.client.post(f'/rides/offer/{ride.id}/cancel/')
+        self.assertEqual(response.status_code, 302)
+        ride.refresh_from_db()
+        self.assertEqual(ride.status, "CANCELLED")
+
+    def test_upi_payment_flow(self):
+        # 1. Create a ride request with payment_method='UPI'
+        req = RideRequest.objects.create(
+            passenger=self.passenger,
+            start_point_name="A",
+            start_lat=Decimal("37.0"),
+            start_lng=Decimal("-122.0"),
+            end_point_name="B",
+            end_lat=Decimal("37.1"),
+            end_lng=Decimal("-122.1"),
+            seats=1,
+            estimated_price=Decimal("25.00"),
+            payment_method="UPI",
+            status="PENDING"
+        )
+        
+        # 2. Driver accepts request
+        self.client.force_login(self.driver)
+        response = self.client.post(f'/rides/request/{req.id}/accept/')
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify trip has payment_method='UPI'
+        trip = Trip.objects.filter(passenger=self.passenger, fare_paid=Decimal("25.00")).first()
+        self.assertIsNotNone(trip)
+        self.assertEqual(trip.payment_method, "UPI")
+        self.assertEqual(trip.status, "BOOKED")
+        
+        # 3. Start trip
+        response = self.client.post(f'/trips/{trip.id}/update-status/', {
+            'status': 'STARTED',
+            'otp_code': trip.otp_code
+        })
+        self.assertEqual(response.status_code, 302)
+        trip.refresh_from_db()
+        self.assertEqual(trip.status, "STARTED")
+        
+        # 4. Driver completes trip (should transition to PAYMENT_PENDING for UPI)
+        response = self.client.post(f'/trips/{trip.id}/update-status/', {
+            'status': 'COMPLETED'
+        })
+        self.assertEqual(response.status_code, 302)
+        trip.refresh_from_db()
+        self.assertEqual(trip.status, "PAYMENT_PENDING")
+        
+        # 5. Passenger settles payment via UPI checkout
+        self.client.force_login(self.passenger)
+        response = self.client.post(f'/payments/{trip.id}/', {
+            'payment_method': 'upi',
+            'upi_id': 'test@upi'
+        })
+        self.assertEqual(response.status_code, 302)
+        
+        trip.refresh_from_db()
+        self.assertEqual(trip.status, "PAYMENT_COMPLETED")
+        
+        # Check driver was credited
+        self.driver.refresh_from_db()
+        self.assertEqual(self.driver.wallet_balance, Decimal("125.00"))

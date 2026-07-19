@@ -1,0 +1,181 @@
+<style>
+  .cs-footer {
+    font-family: 'Plus Jakarta Sans', 'Poppins', system-ui, sans-serif;
+    background: var(--cs-shell);
+    border-top: 1px solid rgba(22, 163, 74, 0.12);
+    padding: 60px 0 30px 0;
+    margin-top: auto;
+    position: relative;
+    overflow: hidden;
+  }
+  .cs-footer::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 10%;
+    width: 250px; height: 250px;
+    background: radial-gradient(circle, rgba(22,163,74,0.06) 0%, rgba(255,255,255,0) 70%);
+    z-index: 0;
+  }
+  .cs-footer .container {
+    position: relative;
+    z-index: 1;
+  }
+  .cs-footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    margin-bottom: 20px;
+  }
+  .cs-footer-logo {
+    width: 46px; height: 46px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--cs-green) 0%, var(--cs-green-dark) 100%);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 20px;
+    box-shadow: 0 6px 16px -4px rgba(16, 163, 74, 0.5);
+  }
+  .cs-footer-title {
+    font-family: 'Plus Jakarta Sans', 'Poppins', sans-serif;
+    font-weight: 800; font-size: 1.25rem; color: var(--cs-ink); letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .cs-footer-desc {
+    color: var(--cs-muted);
+    font-size: 0.88rem;
+    line-height: 1.6;
+    max-width: 320px;
+    margin-bottom: 25px;
+  }
+  .cs-footer-heading {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--cs-ink);
+    margin-bottom: 20px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .cs-footer-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .cs-footer-links li {
+    margin-bottom: 12px;
+  }
+  .cs-footer-links a {
+    color: var(--cs-muted);
+    font-size: 0.88rem;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cs-footer-links a:hover {
+    color: var(--cs-green);
+    transform: translateX(4px);
+  }
+  .cs-social-btn {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(22, 163, 74, 0.06);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--cs-green-dark);
+    margin-right: 8px;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    border: 1px solid rgba(22, 163, 74, 0.05);
+  }
+  .cs-social-btn:hover {
+    background: var(--cs-green);
+    color: #fff;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+  }
+  .cs-footer-bottom {
+    margin-top: 50px;
+    padding-top: 25px;
+    border-top: 1px solid rgba(22, 163, 74, 0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+  .cs-footer-copy {
+    color: var(--cs-muted);
+    font-size: 0.85rem;
+    margin: 0;
+  }
+  .cs-footer-tagline {
+    color: var(--cs-muted);
+    font-size: 0.85rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  @media (max-width: 768px) {
+    .cs-footer-bottom {
+      flex-direction: column;
+      text-align: center;
+    }
+  }
+</style>
+
+<footer class="cs-footer">
+  <div class="container">
+    <div class="row g-4 justify-content-between">
+      
+      <!-- Brand Info -->
+      <div class="col-lg-4 col-md-6">
+        <a class="cs-footer-brand" href="{% if user.is_authenticated %}{% url 'dashboard' %}{% else %}/{% endif %}">
+          <span class="cs-footer-logo"><i class="fa-solid fa-leaf"></i></span>
+          <span class="cs-footer-title">CommuteSync</span>
+        </a>
+        <p class="cs-footer-desc">
+          Empowering enterprise teams to share commutes, cut emissions, and optimize corporate travel through structured ride synchronization.
+        </p>
+        <div class="d-flex">
+          <a href="https://www.linkedin.com/feed/" class="cs-social-btn" title="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+          <a href="https://x.com/" class="cs-social-btn" title="Twitter"><i class="fa-brands fa-twitter"></i></a>
+          <a href="https://www.instagram.com/" class="cs-social-btn" title="Slack"><i class="fa-brands fa-slack"></i></a>
+        </div>
+      </div>
+      
+      <!-- Platform Links -->
+      <div class="col-md-3 col-sm-6">
+        <h5 class="cs-footer-heading">Platform</h5>
+        <ul class="cs-footer-links">
+          <li><a href="{% url 'dashboard' %}"><i class="fa-solid fa-gauge-high text-success"></i> Dashboard</a></li>
+          <li><a href="{% url 'trips' %}"><i class="fa-solid fa-car text-success"></i> Find / Offer Ride</a></li>
+          <li><a href="{% url 'wallet' %}"><i class="fa-solid fa-wallet text-success"></i> My Wallet</a></li>
+          <li><a href="{% url 'history_list' %}"><i class="fa-solid fa-clock-rotate-left text-success"></i> Ride History</a></li>
+        </ul>
+      </div>
+
+      <!-- Settings & Info Links -->
+      <div class="col-md-3 col-sm-6">
+        <h5 class="cs-footer-heading">Settings & Info</h5>
+        <ul class="cs-footer-links">
+          <li><a href="{% url 'profile' %}"><i class="fa-solid fa-user-gear text-success"></i> My Profile</a></li>
+          <li><a href="{% url 'settings' %}"><i class="fa-solid fa-sliders text-success"></i> Platform Settings</a></li>
+          <li><a href="{% url 'reports' %}"><i class="fa-solid fa-chart-line text-success"></i> Eco Analytics</a></li>
+          {% if user.is_authenticated and user.role == 'ADMIN' %}
+            <li><a href="{% url 'admin_dashboard' %}"><i class="fa-solid fa-user-shield text-success"></i> Admin Panel</a></li>
+          {% endif %}
+        </ul>
+      </div>
+      
+    </div>
+    
+    <!-- Footer Bottom -->
+    <div class="cs-footer-bottom">
+      <p class="cs-footer-copy">
+        &copy; 2026 CommuteSync Platform. All rights reserved.
+      </p>
+      <p class="cs-footer-tagline">
+        <span class="text-success"><i class="fa-solid fa-leaf"></i></span> Saving fuel, one shared ride at a time.
+      </p>
+    </div>
+  </div>
+</footer>

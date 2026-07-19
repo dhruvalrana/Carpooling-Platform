@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}Privacy Policy — CommuteSync{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-5">
+  <div class="col-md-9 col-lg-8">
+    <div class="card card-premium p-4 p-md-5 border-0 shadow-sm bg-white">
+      <span class="eyebrow text-uppercase tracking-wider text-primary">Data Protection</span>
+      <h1 class="fw-bold mb-4 text-primary-deep"><i class="fa-solid fa-shield-halved me-2 text-accent"></i>Privacy Policy</h1>
+      
+      <p class="lead text-secondary mb-4">
+        Your privacy is critically important to us. Here is how we collect, store, and process your travel and profile information.
+      </p>
+
+      <h5 class="fw-bold text-primary mt-4 mb-3">1. Information Collection</h5>
+      <p class="text-secondary small">
+        We collect route parameters (pickup and destination coordinates), vehicle info, profile details (first name, last name, phone, email, and employee ID), and transaction settlement histories. Live GPS locations are tracked solely during active transits.
+      </p>
+
+      <h5 class="fw-bold text-primary mt-4 mb-3">2. How We Use Data</h5>
+      <p class="text-secondary small">
+        We utilize details to calculate matches, calculate route distances, prevent fraud, generate security OTP codes, and authorize payments. Location sharing is exclusively enabled between passenger and driver during matched trips.
+      </p>
+
+      <h5 class="fw-bold text-primary mt-4 mb-3">3. Data Sharing</h5>
+      <p class="text-secondary small">
+        Your personal credentials (name, phone, email) are private and are shared only with the matched commuter during ride allocations. We do not sell or monetize commuter information to third-party advertisers.
+      </p>
+
+      <div class="mt-5 border-top pt-4 text-center">
+        <a href="{% url 'splash' %}" class="btn btn-primary-custom px-4 py-2 rounded-pill">
+          <i class="fa-solid fa-arrow-left me-1"></i> Back to Home
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

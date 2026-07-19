@@ -17,10 +17,17 @@ urlpatterns = [
     path('rides/find/', views.find_ride_view, name='find_ride'),
     path('rides/find/confirm/', views.find_confirm_view, name='find_confirm'),
     path('rides/find/results/', views.ride_results_view, name='ride_results'),
+    path('rides/nearby-api/', views.rides_nearby_api_view, name='rides_nearby_api'),
+    path('rides/request/create/', views.create_ride_request_view, name='create_ride_request'),
+    path('rides/request/<int:pk>/', views.ride_request_detail_view, name='ride_request_detail'),
+    path('rides/request/<int:pk>/accept/', views.accept_ride_request_view, name='accept_ride_request'),
+    path('rides/request/<int:pk>/cancel/', views.cancel_ride_request_view, name='cancel_ride_request'),
     path('rides/book/', views.book_ride_view, name='book_ride'),
     path('rides/offer/', views.offer_ride_view, name='offer_ride'),
     path('rides/offer/confirm/', views.offer_confirm_view, name='offer_confirm'),
     path('rides/offer/publish/', views.publish_ride_view, name='publish_ride'),
+    path('rides/offer/<int:pk>/update/', views.update_ride_offer_view, name='update_ride_offer'),
+    path('rides/offer/<int:pk>/cancel/', views.cancel_ride_offer_view, name='cancel_ride_offer'),
     
     # Vehicles
     path('vehicles/', views.vehicle_list_view, name='vehicles'),
@@ -50,6 +57,7 @@ urlpatterns = [
     
     # Settings & Places
     path('notifications/mark-read/', views.mark_notifications_read_view, name='mark_notifications_read'),
+    path('notifications/unread-api/', views.get_unread_notifications_api, name='unread_notifications_api'),
     path('settings/', views.settings_view, name='settings'),
     path('settings/saved-places/', views.saved_places_view, name='saved_places'),
     path('settings/saved-places/delete/<int:place_id>/', views.delete_saved_place_view, name='delete_saved_place'),
@@ -57,6 +65,20 @@ urlpatterns = [
     # Company Admin Panel
     path('admin-panel/', views.admin_dashboard_view, name='admin_dashboard'),
     path('admin-panel/employees/', views.admin_employees_view, name='admin_employees'),
+    path('admin-panel/employees/toggle/<int:pk>/', views.admin_toggle_employee_status_view, name='admin_toggle_employee'),
+    path('admin-panel/employees/save/', views.admin_save_employee_view, name='admin_save_employee'),
+    path('admin-panel/employees/delete/<int:pk>/', views.admin_delete_employee_view, name='admin_delete_employee'),
     path('admin-panel/vehicles/', views.admin_vehicles_view, name='admin_vehicles'),
+    path('admin-panel/vehicles/toggle/<int:pk>/', views.admin_toggle_vehicle_status_view, name='admin_toggle_vehicle'),
+    path('admin-panel/vehicles/save/', views.admin_save_vehicle_view, name='admin_save_vehicle'),
+    path('admin-panel/vehicles/delete/<int:pk>/', views.admin_delete_vehicle_view, name='admin_delete_vehicle'),
     path('admin-panel/config/', views.admin_config_view, name='admin_config'),
+    
+    # Static pages
+    path('about/', views.about_view, name='about'),
+    path('sustainability/', views.sustainability_view, name='sustainability'),
+    path('contact/', views.contact_view, name='contact'),
+    path('privacy/', views.privacy_view, name='privacy'),
+    path('terms/', views.terms_view, name='terms'),
+    path('accessibility/', views.accessibility_view, name='accessibility'),
 ]

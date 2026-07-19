@@ -16,7 +16,12 @@
   </div>
 
   <!-- Messages List -->
-  <div class="chat-messages flex-grow-1" id="chat-messages-box" style="overflow-y: auto; background-color: #fcfbf9;">
+  <div class="chat-messages flex-grow-1" id="chat-messages-box" 
+       hx-get="{% url 'get_chat' trip.id %}" 
+       hx-trigger="every 3s" 
+       hx-select="#chat-messages-box" 
+       hx-swap="outerHTML"
+       style="overflow-y: auto; background-color: #fcfbf9;">
     {% for msg in chat_messages %}
       <div class="d-flex flex-column mb-3 {% if msg.sender == user %}align-items-end{% else %}align-items-start{% endif %}">
         <div class="chat-bubble {% if msg.sender == user %}sent{% else %}received{% endif %} p-2 px-3 shadow-xs">
@@ -53,9 +58,22 @@
   <!-- Auto scroll to bottom script -->
   <script>
     (function() {
-      const chatBox = document.getElementById('chat-messages-box');
-      if (chatBox) {
-        chatBox.scrollTop = chatBox.scrollHeight;
+      const scrollBottom = function() {
+        const chatBox = document.getElementById('chat-messages-box');
+        if (chatBox) {
+          chatBox.scrollTop = chatBox.scrollHeight;
+        }
+      };
+      scrollBottom();
+      
+      // Hook into HTMX swap triggers to scroll after background polling
+      if (!window.chatScrollHooked) {
+        document.body.addEventListener('htmx:afterSwap', function(evt) {
+          if (evt.detail.target.id === 'chat-messages-box' || evt.detail.target.id === 'chat-wrapper') {
+            scrollBottom();
+          }
+        });
+        window.chatScrollHooked = true;
       }
     })();
   </script>

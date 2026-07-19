@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+
+{% block title %}Searching for Driver — CommuteSync{% endblock %}
+
+{% block content %}
+<style>
+  .radar-container {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    margin: 3rem auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .radar-circle {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 2px solid rgba(15, 102, 83, 0.15);
+    border-radius: 50%;
+    animation: radarPulse 3s cubic-bezier(0.1, 0.8, 0.3, 1) infinite;
+  }
+  
+  .radar-circle:nth-child(2) {
+    animation-delay: 1s;
+  }
+  
+  .radar-circle:nth-child(3) {
+    animation-delay: 2s;
+  }
+  
+  .radar-center {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-deep) 0%, #083027 100%);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    box-shadow: 0 0 20px rgba(10, 74, 61, 0.4);
+    z-index: 2;
+  }
+
+  @keyframes radarPulse {
+    0% {
+      transform: scale(0.3);
+      opacity: 0.8;
+    }
+    100% {
+      transform: scale(1.1);
+      opacity: 0;
+    }
+  }
+</style>
+
+{% if is_driver %}
+<div class="row justify-content-center py-5">
+  <div class="col-md-8 col-lg-7">
+    <div class="card card-premium p-4 p-md-5 border-0 shadow-sm bg-white">
+      
+      <span class="eyebrow text-uppercase tracking-wider text-primary">Incoming Commute Details</span>
+      <h2 class="fw-bold mb-3 text-primary-deep">Commuter Match Request</h2>
+      
+      <!-- Passenger Details Box -->
+      <div class="p-3 border rounded-4 bg-light mb-4 d-flex align-items-center gap-3">
+        {% if request_item.passenger.avatar %}
+          <img src="{{ request_item.passenger.avatar }}" class="rounded-circle" style="width: 50px; height: 50px; object-fit: cover;" alt="{{ request_item.passenger.username }}">
+        {% else %}
+          <div class="bg-teal-light text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 50px; height: 50px; background-color: var(--primary-tint); color: var(--primary-deep); font-size: 1.1rem;">
+            {{ request_item.passenger.first_name|slice:":1"|upper }}{{ request_item.passenger.last_name|slice:":1"|upper }}
+          </div>
+        {% endif %}
+        <div class="text-start">
+          <h5 class="fw-bold mb-1 text-dark" style="font-size: 1rem;">{{ request_item.passenger.get_full_name|default:request_item.passenger.username }}</h5>
+          <div class="text-secondary small">
+            <i class="fa-solid fa-phone me-1.5 text-accent"></i>{{ request_item.passenger.phone_number|default:"No phone listed" }} &middot; 
+            <i class="fa-solid fa-envelope me-1.5 text-accent"></i>{{ request_item.passenger.email }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Details Summary Card -->
+      <div class="border rounded-4 p-4 mb-4 text-start bg-light">
+        <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-route me-2 text-accent"></i>Commute Route</h6>
+        
+        <div class="position-relative ps-3.5 mb-3">
+          <div class="position-absolute start-0 top-0 bottom-0 border-start border-dashed" style="margin-left: 5px; border-color: #ced4da !important;"></div>
+          <div class="position-absolute start-0 top-0 bg-accent rounded-circle" style="width: 10px; height: 10px; border: 2px solid white; transform: translateX(-3px) translateY(5px);"></div>
+          <div class="position-absolute start-0 bottom-0 bg-primary rounded-circle" style="width: 10px; height: 10px; border: 2px solid white; transform: translateX(-3px) translateY(-5px);"></div>
+          
+          <div class="mb-3">
+            <small class="text-secondary d-block" style="font-size: 0.72rem;">Pickup Location</small>
+            <span class="fw-semibold text-dark text-truncate d-block" style="font-size: 0.88rem;">{{ request_item.start_point_name }}</span>
+          </div>
+          <div>
+            <small class="text-secondary d-block" style="font-size: 0.72rem;">Destination Location</small>
+            <span class="fw-semibold text-dark text-truncate d-block" style="font-size: 0.88rem;">{{ request_item.end_point_name }}</span>
+          </div>
+        </div>
+
+        <div class="row g-2 border-top pt-3 text-secondary small">
+          <div class="col-6">Vehicle Class Required: <strong class="text-dark">{{ request_item.get_vehicle_type_display }}</strong></div>
+          <div class="col-6">Seats Needed: <strong class="text-dark">{{ request_item.seats }} Seat{{ request_item.seats|pluralize }}</strong></div>
+          <div class="col-6 mt-2">Distance: <strong class="text-dark">{{ distance }} km</strong></div>
+          <div class="col-6 mt-2">Estimated Fare: <strong class="text-success font-monospace fw-bold">₹{{ request_item.estimated_price }}</strong></div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="d-flex flex-column flex-sm-row gap-3">
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary w-100 py-3 rounded-4 fw-bold">
+          <i class="fa-solid fa-arrow-left me-2"></i> Back to Dashboard
+        </a>
+        {% if request_item.status == 'PENDING' %}
+          <form action="{% url 'accept_ride_request' request_item.id %}" method="post" class="w-100 mb-0">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary-custom w-100 py-3 rounded-4 fw-bold">
+              <i class="fa-solid fa-square-check me-2"></i> Accept Ride & Start Commute
+            </button>
+          </form>
+        {% else %}
+          <button class="btn btn-secondary w-100 py-3 rounded-4 fw-bold" disabled>
+            <i class="fa-solid fa-circle-info me-2"></i> Match {{ request_item.get_status_display }}
+          </button>
+        {% endif %}
+      </div>
+      
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="row justify-content-center py-5">
+  <div class="col-md-7 col-lg-6 text-center">
+    <div class="card card-premium p-4 p-md-5 border-0 shadow-sm bg-white">
+      
+      <span class="eyebrow text-uppercase tracking-wider">Broadcasting Request</span>
+      <h2 class="fw-bold mb-1 text-primary-deep" id="searching-title">Searching for Nearby Drivers...</h2>
+      <p class="text-secondary small">Your request is live. Drivers are being notified of your route and estimated fare.</p>
+ 
+      <!-- Radar Animation -->
+      <div class="radar-container">
+        <div class="radar-circle"></div>
+        <div class="radar-circle"></div>
+        <div class="radar-circle"></div>
+        <div class="radar-center">
+          {% if request_item.vehicle_type == 'FOUR' %}
+            <i class="fa-solid fa-car-side fa-pulse"></i>
+          {% elif request_item.vehicle_type == 'TWO' %}
+            <i class="fa-solid fa-motorcycle fa-pulse"></i>
+          {% else %}
+            <i class="fa-solid fa-truck-monster fa-pulse"></i>
+          {% endif %}
+        </div>
+      </div>
+ 
+      <!-- Details Summary Card -->
+      <div class="bg-light border rounded-4 p-4 mb-4 text-start">
+        <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-receipt me-2 text-accent"></i>Request Details</h6>
+        
+        <div class="position-relative ps-3.5 mb-3">
+          <div class="position-absolute start-0 top-0 bottom-0 border-start border-dashed" style="margin-left: 5px; border-color: #ced4da !important;"></div>
+          <div class="position-absolute start-0 top-0 bg-accent rounded-circle" style="width: 10px; height: 10px; border: 2px solid white; transform: translateX(-3px) translateY(5px);"></div>
+          <div class="position-absolute start-0 bottom-0 bg-primary rounded-circle" style="width: 10px; height: 10px; border: 2px solid white; transform: translateX(-3px) translateY(-5px);"></div>
+          
+          <div class="mb-3">
+            <small class="text-secondary d-block" style="font-size: 0.72rem;">Pickup</small>
+            <span class="fw-semibold text-dark text-truncate d-block" style="font-size: 0.88rem;">{{ request_item.start_point_name }}</span>
+          </div>
+          <div>
+            <small class="text-secondary d-block" style="font-size: 0.72rem;">Destination</small>
+            <span class="fw-semibold text-dark text-truncate d-block" style="font-size: 0.88rem;">{{ request_item.end_point_name }}</span>
+          </div>
+        </div>
+ 
+        <div class="row g-2 border-top pt-3 text-secondary small">
+          <div class="col-6">Vehicle Type: <strong class="text-dark">{{ request_item.get_vehicle_type_display }}</strong></div>
+          <div class="col-6">Seats Needed: <strong class="text-dark">{{ request_item.seats }} Seat{{ request_item.seats|pluralize }}</strong></div>
+          <div class="col-6 mt-2">Distance: <strong class="text-dark">{{ distance }} km</strong></div>
+          <div class="col-6 mt-2">Estimated Fare: <strong class="text-success font-monospace fw-bold">₹{{ request_item.estimated_price }}</strong></div>
+        </div>
+      </div>
+ 
+      <!-- Action Button -->
+      <form action="{% url 'cancel_ride_request' request_item.id %}" method="post" onsubmit="return confirm('Are you sure you want to cancel your ride request?');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-danger w-100 py-3 rounded-4 fw-semibold">
+          <i class="fa-solid fa-ban me-2"></i> Cancel Ride Request
+        </button>
+      </form>
+      
+    </div>
+  </div>
+</div>
+ 
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var requestId = "{{ request_item.id }}";
+    
+    // Poll every 3 seconds
+    var pollInterval = setInterval(function() {
+      fetch(`/rides/request/${requestId}/?ajax=true`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'ACCEPTED' && data.trip_id) {
+            clearInterval(pollInterval);
+            
+            // Show matched state briefly
+            document.getElementById('searching-title').innerText = "Match Found! Redirecting...";
+            document.getElementById('searching-title').classList.remove('text-primary-deep');
+            document.getElementById('searching-title').classList.add('text-success');
+            
+            setTimeout(function() {
+              window.location.href = `/trips/${data.trip_id}/`;
+            }, 1000);
+          } else if (data.status === 'CANCELLED') {
+            clearInterval(pollInterval);
+            alert("Your ride request was cancelled.");
+            window.location.href = "{% url 'find_ride' %}";
+          }
+        })
+        .catch(err => console.error("Error polling ride status:", err));
+    }, 3000);
+  });
+</script>
+{% endif %}
+{% endblock %}

@@ -2,190 +2,493 @@
 
 {% block title %}Search Results — CommuteSync{% endblock %}
 
+{% block extra_head %}
+<style>
+  /* Full-bleed map layout */
+  .results-wrapper {
+    position: relative;
+    height: calc(100vh - 80px);
+    margin: -1.5rem -1rem 0;
+    overflow: hidden;
+  }
+
+  #results-map {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+
+  /* Animated pulsing car bubble */
+  .car-bubble {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .car-bubble .pulse-ring {
+    position: absolute;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(26, 115, 232, 0.25);
+    animation: pulse-anim 2s ease-out infinite;
+  }
+  .car-bubble .pulse-ring:nth-child(2) { animation-delay: 0.7s; }
+  .car-bubble .inner {
+    position: relative;
+    z-index: 2;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #1A73E8;
+    border: 3px solid #fff;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 15px;
+  }
+  .car-bubble.selected .inner {
+    background: #E65100;
+    animation: bounce-selected 0.4s ease;
+  }
+  @keyframes pulse-anim {
+    0%   { transform: scale(1); opacity: 0.7; }
+    100% { transform: scale(2.4); opacity: 0; }
+  }
+  @keyframes bounce-selected {
+    0%,100% { transform: scale(1); }
+    50%      { transform: scale(1.3); }
+  }
+
+  /* Bottom slide-up sheet */
+  .bottom-sheet {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    z-index: 100;
+    background: #fff;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -8px 32px rgba(0,0,0,0.18);
+    transition: transform 0.35s cubic-bezier(.4,0,.2,1);
+    max-height: 72vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .bottom-sheet.collapsed { transform: translateY(calc(100% - 72px)); }
+  .sheet-handle {
+    width: 40px; height: 4px; border-radius: 2px;
+    background: #d1d5db; margin: 10px auto 0;
+    cursor: pointer; flex-shrink: 0;
+  }
+  .sheet-header {
+    padding: 8px 20px 12px;
+    border-bottom: 1px solid #f3f4f6;
+    flex-shrink: 0;
+    cursor: pointer;
+    user-select: none;
+  }
+  .sheet-body {
+    overflow-y: auto;
+    flex: 1;
+    padding: 12px 16px 20px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Ride card */
+  .ride-card {
+    border-radius: 16px;
+    border: 2px solid transparent;
+    background: #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+    padding: 14px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+  }
+  .ride-card:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+  .ride-card.active { border-color: #1A73E8; box-shadow: 0 4px 18px rgba(26,115,232,0.2); }
+  .ride-card.active .driver-avatar { background: #1A73E8; color: #fff; }
+
+  .driver-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: #e8f4fd; color: #1A73E8;
+    font-weight: 700; font-size: 1.1rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .fare-badge {
+    font-size: 1.3rem; font-weight: 800;
+    color: var(--color-accent, #FF7043);
+  }
+  .info-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #f3f4f6; border-radius: 8px;
+    padding: 3px 8px; font-size: 0.75rem; color: #374151;
+    font-weight: 500;
+  }
+  .seat-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    display: inline-block;
+  }
+  .seat-dot.avail { background: #1A73E8; }
+  .seat-dot.taken { background: #d1d5db; }
+
+  /* Map top overlay: route summary bar */
+  .route-bar {
+    position: absolute;
+    top: 12px; left: 12px; right: 12px;
+    z-index: 50;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 14px;
+    padding: 10px 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .route-bar .route-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  }
+  .route-bar .route-text {
+    font-size: 0.78rem; font-weight: 600; color: #1f2937;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .route-bar .divider { color: #9ca3af; font-size: 0.75rem; flex-shrink: 0; }
+  .route-bar .change-btn {
+    margin-left: auto; font-size: 0.72rem; font-weight: 600;
+    color: #1A73E8; text-decoration: none; white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Vehicle count badge on map */
+  .vehicles-badge {
+    position: absolute;
+    top: 70px; left: 50%; transform: translateX(-50%);
+    z-index: 50;
+    background: #1A73E8;
+    color: #fff;
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 0.78rem; font-weight: 700;
+    box-shadow: 0 2px 8px rgba(26,115,232,0.4);
+    white-space: nowrap;
+    animation: fadeInDown 0.4s ease;
+  }
+  @keyframes fadeInDown {
+    from { opacity:0; transform: translateX(-50%) translateY(-8px); }
+    to   { opacity:1; transform: translateX(-50%) translateY(0); }
+  }
+
+  {% if not rides %}
+  .no-rides-overlay {
+    position: absolute;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    z-index: 50;
+    background: rgba(255,255,255,0.96);
+    border-radius: 18px;
+    padding: 30px 36px;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  }
+  {% endif %}
+</style>
+{% endblock %}
+
 {% block content %}
-<!-- Search Summary Header -->
-<div class="row mb-4">
-  <div class="col-12">
-    <div class="card card-premium p-3 border-0 bg-white shadow-sm">
-      <div class="row align-items-center">
-        <div class="col-md-8">
-          <h4 class="fw-bold mb-1 text-primary">Matching Rides Found</h4>
-          <p class="text-secondary mb-0 small">
-            Route: <span class="fw-semibold text-dark">{{ start_name|truncatechars:35 }}</span> 
-            &rarr; <span class="fw-semibold text-dark">{{ end_name|truncatechars:35 }}</span> 
-            ({{ route_distance }} km)
-          </p>
+<div class="results-wrapper">
+
+  <!-- Map -->
+  <div id="results-map"></div>
+
+  <!-- Route summary bar -->
+  <div class="route-bar">
+    <span class="route-dot" style="background:#FF5252;"></span>
+    <span class="route-text">{{ start_name|truncatechars:28 }}</span>
+    <span class="divider">→</span>
+    <span class="route-dot" style="background:#1565C0;"></span>
+    <span class="route-text">{{ end_name|truncatechars:28 }}</span>
+    <a href="{% url 'find_ride' %}" class="change-btn">✎ Change</a>
+  </div>
+
+  {% if rides %}
+  <!-- Vehicle count badge -->
+  <div class="vehicles-badge" id="vehicleBadge">
+    <i class="fa-solid fa-car me-1"></i> {{ rides|length }} vehicle{{ rides|length|pluralize }} nearby
+  </div>
+
+  <!-- Bottom Slide-Up Sheet -->
+  <div class="bottom-sheet collapsed" id="bottomSheet">
+    <div class="sheet-handle" id="sheetHandle"></div>
+    <div class="sheet-header" id="sheetHeader">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <h6 class="fw-bold mb-0 text-dark">{{ rides|length }} Available Ride{{ rides|length|pluralize }}</h6>
+          <small class="text-secondary">{{ route_distance }} km &bull; Tap a car on map or card below</small>
         </div>
-        <div class="col-md-4 text-md-end mt-2 mt-md-0">
-          <a href="{% url 'find_ride' %}" class="btn btn-outline-primary-custom btn-sm">
-            <i class="fa-solid fa-arrow-left me-1"></i> Change Route
-          </a>
-        </div>
+        <i class="fa-solid fa-chevron-up text-secondary" id="sheetChevron"></i>
       </div>
     </div>
-  </div>
-</div>
+    <div class="sheet-body" id="sheetBody">
 
-<div class="row g-4">
-  <!-- Rides List Column -->
-  <div class="col-lg-6">
-    {% if rides %}
-      <div class="d-flex flex-column gap-3">
-        {% for item in rides %}
-          <div class="card card-premium p-3 border-0 hover-shadow transition-all bg-white">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-              <div class="d-flex align-items-center gap-2">
-                <!-- Driver Avatar -->
-                <div class="bg-teal-light rounded-circle d-flex align-items-center justify-content-center text-primary fw-bold" style="width: 44px; height: 44px; font-size: 1.1rem;">
-                  {{ item.ride.driver.username|slice:":1"|upper }}
-                </div>
-                <div>
-                  <h6 class="fw-bold text-dark mb-0">{{ item.ride.driver.get_full_name|default:item.ride.driver.username }}</h6>
-                  <small class="text-secondary text-truncate d-block">{{ item.ride.driver.department|default:"Employee" }}</small>
-                </div>
-              </div>
-              
-              <!-- Fare Tag -->
-              <div class="text-end">
-                <span class="fs-4 fw-bold text-accent">${{ item.passenger_fare }}</span>
-                <small class="text-muted d-block" style="font-size: 0.7rem;">(${{ item.ride.price_per_km }}/km rate)</small>
-              </div>
+      {% for item in rides %}
+      <div class="ride-card" id="card-{{ item.ride.id }}"
+           data-ride-id="{{ item.ride.id }}"
+           data-lat="{{ item.ride.start_lat }}"
+           data-lng="{{ item.ride.start_lng }}"
+           onclick="selectRide('{{ item.ride.id }}')">
+        <div class="d-flex align-items-center gap-3 mb-2">
+          {% if item.ride.driver.avatar %}
+            <img src="{{ item.ride.driver.avatar }}" class="driver-avatar" alt="{{ item.ride.driver.username }}" style="object-fit: cover;">
+          {% else %}
+            <div class="driver-avatar" id="avatar-{{ item.ride.id }}">
+              {{ item.ride.driver.first_name|slice:":1"|upper }}{{ item.ride.driver.last_name|slice:":1"|upper }}
             </div>
-
-            <!-- Ride Details Body -->
-            <div class="row bg-light rounded-4 p-3 mb-3 g-2 mx-0" style="border: 1px solid var(--color-border);">
-              <div class="col-6">
-                <small class="text-secondary d-block">Departure</small>
-                <span class="fw-semibold text-dark small"><i class="fa-regular fa-clock me-1 text-primary"></i> {{ item.ride.departure_time|date:"M d, h:i A" }}</span>
-              </div>
-              <div class="col-6">
-                <small class="text-secondary d-block">Vehicle Info</small>
-                <span class="fw-semibold text-dark small"><i class="fa-solid fa-car me-1 text-primary"></i> {{ item.ride.vehicle.color }} {{ item.ride.vehicle.make }}</span>
-              </div>
-              <div class="col-6">
-                <small class="text-secondary d-block">Match Proximity</small>
-                <span class="fw-semibold text-dark small"><i class="fa-solid fa-person-walking me-1 text-accent"></i> {{ item.pickup_dist }} km away</span>
-              </div>
-              <div class="col-6">
-                <small class="text-secondary d-block">Seats Left</small>
-                <span class="fw-semibold text-dark small">
-                  {% with ''|center:item.ride.total_seats as range %}
-                    {% for _ in range %}
-                      {% if forloop.counter <= item.ride.seats_available %}
-                        <i class="fa-solid fa-couch text-primary me-1" title="Available seat" style="font-size: 0.8rem;"></i>
-                      {% else %}
-                        <i class="fa-solid fa-couch text-muted opacity-30 me-1" title="Booked seat" style="font-size: 0.8rem;"></i>
-                      {% endif %}
-                    {% endfor %}
-                  {% endwith %}
-                  <span class="ms-1">{{ item.ride.seats_available }}/{{ item.ride.total_seats }}</span>
-                </span>
-              </div>
-            </div>
-
-            <!-- Booking Section -->
-            <form action="{% url 'book_ride' %}" method="post" class="d-flex align-items-center gap-3">
-              {% csrf_token %}
-              <input type="hidden" name="ride_id" value="{{ item.ride.id }}">
-              <input type="hidden" name="start_lat" value="{{ start_lat }}">
-              <input type="hidden" name="start_lng" value="{{ start_lng }}">
-              <input type="hidden" name="end_lat" value="{{ end_lat }}">
-              <input type="hidden" name="end_lng" value="{{ end_lng }}">
-              
-              <div class="d-flex align-items-center gap-2">
-                <label class="small text-secondary fw-semibold mb-0" style="white-space: nowrap;">Reserve seats:</label>
-                <select name="seats_booked" class="form-select form-select-sm rounded-3" style="width: 70px;">
-                  {% with ''|center:item.ride.seats_available as range %}
-                    {% for _ in range %}
-                      <option value="{{ forloop.counter }}" {% if forloop.counter == seats_requested %}selected{% endif %}>{{ forloop.counter }}</option>
-                    {% endfor %}
-                  {% endwith %}
-                </select>
-              </div>
-
-              <button type="submit" class="btn btn-accent-custom btn-sm py-2 px-4 rounded-pill ms-auto shadow-sm">
-                <i class="fa-solid fa-bookmark me-1"></i> Book Seat
-              </button>
-            </form>
+          {% endif %}
+          <div class="flex-grow-1">
+            <div class="fw-bold text-dark">{{ item.ride.driver.get_full_name|default:item.ride.driver.username }}</div>
+            <small class="text-secondary">{{ item.ride.vehicle.color }} {{ item.ride.vehicle.make }} • {{ item.ride.vehicle.license_plate }}</small>
           </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="card card-premium p-5 text-center shadow-sm border-0 bg-white">
-        <div class="opacity-20 mb-4 text-primary" style="font-size: 4rem;">
-          <i class="fa-solid fa-map-location-dot"></i>
+          <div class="text-end">
+            <div class="fare-badge">₹{{ item.passenger_fare }}</div>
+            <small class="text-muted" style="font-size:0.68rem;">₹{{ item.ride.price_per_km }}/km</small>
+          </div>
         </div>
-        <h4 class="fw-bold text-dark mb-2">No Matching Rides Found</h4>
-        <p class="text-secondary mb-4" style="max-width: 500px; margin: 0 auto;">
-          We couldn't find any driver commutes matching your pick-up and drop-off range (within 10 km).
-        </p>
-        <a href="{% url 'find_ride' %}" class="btn btn-primary-custom px-5 py-3 rounded-4 shadow-sm" style="max-width: fit-content; margin: 0 auto;">
-          <i class="fa-solid fa-arrow-left me-2"></i> Try Another Location
-        </a>
-      </div>
-    {% endif %}
-  </div>
 
-  <!-- Map Preview Column -->
-  <div class="col-lg-6">
-    <div class="card card-premium p-3 shadow-sm border-0 bg-white h-100">
-      <h5 class="fw-bold mb-2 text-primary"><i class="fa-solid fa-map-location-dot me-2"></i>Available Routes Map</h5>
-      <div id="results-map" class="map-container" style="height: 520px; z-index: 10;"></div>
-      <div class="d-flex justify-content-between mt-2 small text-secondary">
-        <span><i class="fa-solid fa-circle text-accent"></i> Search Pickup</span>
-        <span><i class="fa-solid fa-circle text-primary"></i> Driver Pickups</span>
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <span class="info-chip"><i class="fa-regular fa-clock text-primary"></i> {{ item.ride.departure_time|date:"M d, h:i A" }}</span>
+          <span class="info-chip"><i class="fa-solid fa-person-walking text-accent"></i> {{ item.pickup_dist }} km away</span>
+          <span class="info-chip">
+            {% with ''|center:item.ride.total_seats as seat_range %}
+              {% for _ in seat_range %}
+                {% if forloop.counter <= item.ride.seats_available %}
+                  <span class="seat-dot avail"></span>
+                {% else %}
+                  <span class="seat-dot taken"></span>
+                {% endif %}
+              {% endfor %}
+            {% endwith %}
+            {{ item.ride.seats_available }}/{{ item.ride.total_seats }} seats
+          </span>
+        </div>
+
+        <form action="{% url 'book_ride' %}" method="post" class="d-flex align-items-center gap-2" onclick="event.stopPropagation()">
+          {% csrf_token %}
+          <input type="hidden" name="ride_id" value="{{ item.ride.id }}">
+          <input type="hidden" name="start_lat" value="{{ start_lat }}">
+          <input type="hidden" name="start_lng" value="{{ start_lng }}">
+          <input type="hidden" name="end_lat" value="{{ end_lat }}">
+          <input type="hidden" name="end_lng" value="{{ end_lng }}">
+          <label class="small text-secondary fw-semibold mb-0">Seats:</label>
+          <select name="seats_booked" class="form-select form-select-sm rounded-3" style="width:65px;">
+            {% with ''|center:item.ride.seats_available as range %}
+              {% for _ in range %}
+                <option value="{{ forloop.counter }}" {% if forloop.counter == seats_requested %}selected{% endif %}>{{ forloop.counter }}</option>
+              {% endfor %}
+            {% endwith %}
+          </select>
+          <label class="small text-secondary fw-semibold mb-0 ms-2">Pay:</label>
+          <select name="payment_method" class="form-select form-select-sm rounded-3" style="width:85px; font-size: 0.75rem;">
+            <option value="WALLET" selected>Wallet</option>
+            <option value="UPI">UPI</option>
+          </select>
+          <button type="submit" class="btn btn-sm ms-auto px-4 py-2 rounded-pill fw-bold text-white"
+                  style="background: linear-gradient(135deg,#1A73E8,#0D47A1); box-shadow:0 2px 8px rgba(26,115,232,0.4);">
+            <i class="fa-solid fa-bookmark me-1"></i> Book
+          </button>
+        </form>
       </div>
+      {% endfor %}
+
     </div>
   </div>
+
+  {% else %}
+  <!-- No rides overlay on the map -->
+  <div class="no-rides-overlay">
+    <div style="font-size:3.5rem; opacity:0.2;" class="text-primary mb-3"><i class="fa-solid fa-car"></i></div>
+    <h5 class="fw-bold text-dark mb-2">No Vehicles Nearby</h5>
+    <p class="text-secondary mb-4" style="max-width:280px;margin:0 auto;">
+      No driver commutes match your pickup &amp; drop range (within 10 km).
+    </p>
+    <a href="{% url 'find_ride' %}" class="btn btn-primary-custom px-5 py-2 rounded-pill">
+      <i class="fa-solid fa-arrow-left me-2"></i> Try Another Route
+    </a>
+  </div>
+  {% endif %}
+
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // Initialize results map centered on the passenger search pickup point
-    const searchLat = parseFloat("{{ start_lat }}");
-    const searchLng = parseFloat("{{ start_lng }}");
-    const destLat = parseFloat("{{ end_lat }}");
-    const destLng = parseFloat("{{ end_lng }}");
+  // ── Data from Django ────────────────────────────────────────────────────────
+  const searchLat = parseFloat("{{ start_lat }}");
+  const searchLng = parseFloat("{{ start_lng }}");
+  const destLat   = parseFloat("{{ end_lat }}");
+  const destLng   = parseFloat("{{ end_lng }}");
 
-    const map = L.map('results-map').setView([searchLat, searchLng], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
-
-    // Search Pickup pin (Accent color coral)
-    const coralIcon = L.divIcon({
-      className: 'custom-div-icon',
-      html: `<div style="background-color: var(--color-accent); width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
-      iconSize: [14, 14],
-      iconAnchor: [7, 7]
-    });
-    L.marker([searchLat, searchLng], {icon: coralIcon}).addTo(map).bindPopup("Your Pickup Point").openPopup();
-
-    // Search Destination pin
-    const endIcon = L.divIcon({
-      className: 'custom-div-icon',
-      html: `<div style="background-color: #000; width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
-      iconSize: [14, 14],
-      iconAnchor: [7, 7]
-    });
-    L.marker([destLat, destLng], {icon: endIcon}).addTo(map).bindPopup("Your Destination");
-
-    // Add pins for matching drivers' pickup locations
-    const driverIcon = L.divIcon({
-      className: 'custom-div-icon',
-      html: `<div style="background-color: var(--color-primary); width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
-      iconSize: [14, 14],
-      iconAnchor: [7, 7]
-    });
-
+  const rides = [
     {% for item in rides %}
-      L.marker([parseFloat("{{ item.ride.start_lat }}"), parseFloat("{{ item.ride.start_lng }}")], {icon: driverIcon})
-        .addTo(map)
-        .bindPopup(`<b>{{ item.ride.driver.get_full_name|default:item.ride.driver.username }}</b><br>Fare: ₹${ parseFloat("{{ item.passenger_fare }}") }`);
+    {
+      id:        "{{ item.ride.id }}",
+      lat:       parseFloat("{{ item.ride.start_lat }}"),
+      lng:       parseFloat("{{ item.ride.start_lng }}"),
+      driver:    "{{ item.ride.driver.get_full_name|default:item.ride.driver.username }}",
+      vehicle:   "{{ item.ride.vehicle.color }} {{ item.ride.vehicle.make }}",
+      plate:     "{{ item.ride.vehicle.license_plate }}",
+      fare:      "₹{{ item.passenger_fare }}",
+      seats:     "{{ item.ride.seats_available }}/{{ item.ride.total_seats }}",
+      depart:    "{{ item.ride.departure_time|date:'M d, h:i A' }}",
+      pickupDist:"{{ item.pickup_dist }}",
+    },
     {% endfor %}
+  ];
+
+  // ── Map init ────────────────────────────────────────────────────────────────
+  const map = L.map('results-map', { zoomControl: false }).setView([searchLat, searchLng], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19, attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  // Zoom control top-right
+  L.control.zoom({ position: 'topright' }).addTo(map);
+
+  // ── Pickup & Destination pins ────────────────────────────────────────────────
+  function tearDropIcon(fill) {
+    return L.divIcon({
+      className: '',
+      html: `<div style="position:relative;width:32px;height:42px">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 42" width="32" height="42">
+          <path d="M16 0 C7.163 0 0 7.163 0 16 C0 28 16 42 16 42 C16 42 32 28 32 16 C32 7.163 24.837 0 16 0 Z" fill="${fill}" stroke="white" stroke-width="2"/>
+          <circle cx="16" cy="16" r="7" fill="white"/>
+        </svg></div>`,
+      iconSize: [32, 42], iconAnchor: [16, 42], popupAnchor: [0, -42]
+    });
+  }
+
+  L.marker([searchLat, searchLng], {icon: tearDropIcon('#FF5252')})
+    .addTo(map).bindPopup("<b>🟢 Your Pickup</b><br>{{ start_name }}").openPopup();
+  L.marker([destLat, destLng], {icon: tearDropIcon('#1565C0')})
+    .addTo(map).bindPopup("<b>🔵 Your Destination</b><br>{{ end_name }}");
+
+  // ── Animated car markers ─────────────────────────────────────────────────────
+  const markerMap = {};   // rideId -> L.marker
+  let selectedRideId = null;
+
+  function makeCarIcon(rideId, selected) {
+    const color = selected ? '#E65100' : '#1A73E8';
+    return L.divIcon({
+      className: '',
+      html: `<div class="car-bubble ${selected ? 'selected' : ''}" data-rid="${rideId}">
+        <div class="pulse-ring"></div>
+        <div class="pulse-ring"></div>
+        <div class="inner"><i class="fa-solid fa-car-side"></i></div>
+      </div>`,
+      iconSize: [44, 44], iconAnchor: [22, 22], popupAnchor: [0, -22]
+    });
+  }
+
+  rides.forEach(r => {
+    const m = L.marker([r.lat, r.lng], { icon: makeCarIcon(r.id, false) })
+      .addTo(map)
+      .bindPopup(`
+        <div style="min-width:170px">
+          <div class="fw-bold mb-1">${r.driver}</div>
+          <div class="small text-muted mb-1">${r.vehicle} · ${r.plate}</div>
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="small"><i class="fa-solid fa-couch me-1 text-primary"></i>${r.seats} seats</span>
+            <span class="fw-bold" style="color:#FF7043;font-size:1rem;">${r.fare}</span>
+          </div>
+          <div class="small text-muted mt-1"><i class="fa-regular fa-clock me-1"></i>${r.depart}</div>
+          <div class="small text-muted"><i class="fa-solid fa-person-walking me-1"></i>${r.pickupDist} km from pickup</div>
+        </div>
+      `, { maxWidth: 220 });
+
+    m.on('click', () => selectRide(r.id));
+    markerMap[r.id] = m;
   });
+
+  // ── Select ride (from card OR map click) ─────────────────────────────────────
+  function selectRide(rideId) {
+    // Deselect old
+    if (selectedRideId) {
+      const old = markerMap[selectedRideId];
+      if (old) old.setIcon(makeCarIcon(selectedRideId, false));
+      const oldCard = document.getElementById(`card-${selectedRideId}`);
+      if (oldCard) oldCard.classList.remove('active');
+    }
+
+    // Select new
+    selectedRideId = rideId;
+    const m = markerMap[rideId];
+    if (m) {
+      m.setIcon(makeCarIcon(rideId, true));
+      m.openPopup();
+      map.panTo(m.getLatLng(), { animate: true, duration: 0.5 });
+    }
+    const card = document.getElementById(`card-${rideId}`);
+    if (card) {
+      card.classList.add('active');
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    // Expand sheet
+    openSheet();
+  }
+
+  // ── Route line ────────────────────────────────────────────────────────────────
+  function drawFallback() {
+    L.polyline([[searchLat,searchLng],[destLat,destLng]],
+      {color:'#fff', weight:9, opacity:0.85, lineJoin:'round', lineCap:'round'}).addTo(map);
+    const line = L.polyline([[searchLat,searchLng],[destLat,destLng]],
+      {color:'#1A73E8', weight:4, dashArray:'6,10', lineJoin:'round', lineCap:'round'}).addTo(map);
+    const bounds = L.latLngBounds([[searchLat,searchLng],[destLat,destLng]]);
+    if (rides.length) rides.forEach(r => bounds.extend([r.lat, r.lng]));
+    map.fitBounds(bounds, { padding: [80, 80] });
+  }
+
+  fetch(`https://router.project-osrm.org/route/v1/driving/${searchLng},${searchLat};${destLng},${destLat}?overview=full&geometries=geojson`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.code !== 'Ok' || !data.routes.length) { drawFallback(); return; }
+      const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+      L.polyline(coords, {color:'#fff', weight:9, opacity:0.85, lineJoin:'round', lineCap:'round'}).addTo(map);
+      L.polyline(coords, {color:'#1A73E8', weight:4, opacity:0.85, lineJoin:'round', lineCap:'round'}).addTo(map);
+      const bounds = L.latLngBounds(coords);
+      if (rides.length) rides.forEach(r => bounds.extend([r.lat, r.lng]));
+      map.fitBounds(bounds, { padding: [80, 80] });
+    })
+    .catch(() => drawFallback());
+
+  // ── Bottom sheet toggle ───────────────────────────────────────────────────────
+  let sheetOpen = false;
+  const sheet   = document.getElementById('bottomSheet');
+  const chevron = document.getElementById('sheetChevron');
+
+  function openSheet() {
+    sheetOpen = true;
+    if (sheet) sheet.classList.remove('collapsed');
+    if (chevron) chevron.style.transform = 'rotate(180deg)';
+  }
+  function closeSheet() {
+    sheetOpen = false;
+    if (sheet) sheet.classList.add('collapsed');
+    if (chevron) chevron.style.transform = '';
+  }
+
+  const sheetHeader = document.getElementById('sheetHeader');
+  if (sheetHeader) {
+    sheetHeader.addEventListener('click', () => sheetOpen ? closeSheet() : openSheet());
+  }
+
+  // Auto-open sheet after a short delay
+  setTimeout(() => openSheet(), 800);
+
+  // Close sheet when user pans/zooms map
+  map.on('dragstart zoomstart', () => {
+    if (sheetOpen) closeSheet();
+  });
+
+  // Re-layout map after sheet transition
+  if (sheet) sheet.addEventListener('transitionend', () => map.invalidateSize());
 </script>
 {% endblock %}

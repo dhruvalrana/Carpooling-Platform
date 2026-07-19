@@ -50,7 +50,8 @@ class Command(BaseCommand):
             employee_id="EMP501",
             department="Engineering",
             wallet_balance=Decimal("150.00"),
-            role="EMPLOYEE"
+            role="EMPLOYEE",
+            phone_number="+91 9876543210"
         )
         self.stdout.write("Created driver user: john_doe (password:password123     ).")
 
@@ -92,7 +93,8 @@ class Command(BaseCommand):
             employee_id="EMP822",
             department="Product Design",
             wallet_balance=Decimal("80.00"),
-            role="EMPLOYEE"
+            role="EMPLOYEE",
+            phone_number="+91 9999988888"
         )
         self.stdout.write("Created passenger user: jane_smith (password: password123).")
 

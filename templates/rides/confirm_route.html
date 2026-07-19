@@ -40,15 +40,26 @@
         </div>
 
         <!-- Calculated Route Metrics -->
-        <div class="p-3 bg-light rounded-4 border mb-4">
+        <div class="p-3 bg-light rounded-4 border mb-3">
           <div class="row text-center">
             <div class="col-6 border-end">
               <small class="text-secondary d-block">Route Distance</small>
-              <h4 class="fw-bold text-dark mt-1 mb-0">{{ distance }} km</h4>
+              <h4 class="fw-bold text-dark mt-1 mb-0"><span id="display_distance">{{ distance }}</span> km</h4>
             </div>
             <div class="col-6">
               <small class="text-secondary d-block">Est. Duration</small>
-              <h4 class="fw-bold text-dark mt-1 mb-0">{{ duration }} mins</h4>
+              <h4 class="fw-bold text-dark mt-1 mb-0"><span id="display_duration">{{ duration }}</span> mins</h4>
+            </div>
+          </div>
+        </div>
+
+        <!-- Suggested Routes Selector List -->
+        <div class="mb-4">
+          <label class="form-label fw-bold text-secondary small mb-2"><i class="fa-solid fa-map me-1 text-primary"></i>Suggested Routes</label>
+          <div class="d-flex flex-column gap-2" id="route-suggestions-list">
+            <div class="text-center text-secondary py-3 small bg-light rounded-4">
+              <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+              Calculating alternative paths...
             </div>
           </div>
         </div>
@@ -57,16 +68,29 @@
         {% if mode == 'find' %}
           <div class="bg-teal-light rounded-4 p-3 border mb-4">
             <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="text-secondary small">Vehicle Type:</span>
+              <span class="fw-bold text-primary">
+                {% if vehicle_type == 'TWO' %}
+                  🏍️ Two-Wheeler
+                {% elif vehicle_type == 'THREE' %}
+                  🛺 Three-Wheeler
+                {% else %}
+                  🚗 Four-Wheeler
+                {% endif %}
+              </span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
               <span class="text-secondary small">Seats Requested:</span>
               <span class="fw-bold text-dark">{{ seats }} Seat{{ seats|pluralize }}</span>
             </div>
             <div class="d-flex justify-content-between align-items-center">
               <span class="text-secondary small">Est. Total Ticket Fare:</span>
-              <span class="fs-4 fw-bold text-accent">₹{{ fare|floatformat:2 }}</span>
+              <span class="fs-4 fw-bold text-accent" id="display_fare">₹{{ fare|floatformat:2 }}</span>
             </div>
           </div>
           
-          <form method="get" action="{% url 'ride_results' %}">
+          <form method="post" action="{% url 'create_ride_request' %}">
+            {% csrf_token %}
             <input type="hidden" name="start_name" value="{{ start_name }}">
             <input type="hidden" name="start_lat" value="{{ start_lat }}">
             <input type="hidden" name="start_lng" value="{{ start_lng }}">
@@ -74,7 +98,29 @@
             <input type="hidden" name="end_lat" value="{{ end_lat }}">
             <input type="hidden" name="end_lng" value="{{ end_lng }}">
             <input type="hidden" name="seats" value="{{ seats }}">
+            <input type="hidden" name="vehicle_type" value="{{ vehicle_type }}">
+            <input type="hidden" name="estimated_price" id="input_estimated_price" value="{{ fare|floatformat:2 }}">
+            <input type="hidden" name="departure_time" value="{{ departure_time }}">
             
+            <!-- Payment Method Choice -->
+            <div class="mb-4 text-start">
+              <label class="form-label fw-bold text-secondary small mb-2"><i class="fa-solid fa-credit-card me-1.5 text-accent"></i>Select Payment Method</label>
+              <div class="d-flex gap-3">
+                <div class="form-check flex-fill border rounded-4 p-3 bg-white d-flex align-items-center gap-2 cursor-pointer transition-all" style="border-color: var(--color-border) !important;">
+                  <input class="form-check-input ms-0" type="radio" name="payment_method" id="pay_wallet" value="WALLET" checked style="cursor: pointer;">
+                  <label class="form-check-label fw-semibold text-dark small cursor-pointer mb-0 ms-1" for="pay_wallet">
+                    Wallet Balance
+                  </label>
+                </div>
+                <div class="form-check flex-fill border rounded-4 p-3 bg-white d-flex align-items-center gap-2 cursor-pointer transition-all" style="border-color: var(--color-border) !important;">
+                  <input class="form-check-input ms-0" type="radio" name="payment_method" id="pay_upi" value="UPI" style="cursor: pointer;">
+                  <label class="form-check-label fw-semibold text-dark small cursor-pointer mb-0 ms-1" for="pay_upi">
+                    UPI Payment
+                  </label>
+                </div>
+              </div>
+            </div>
+
             <div class="d-flex gap-2">
               <a href="{% url 'find_ride' %}" class="btn btn-outline-primary-custom w-50 py-3 rounded-4">Back</a>
               <button type="submit" class="btn btn-primary-custom w-50 py-3 rounded-4 shadow-sm">
@@ -102,7 +148,7 @@
             </div>
             <div class="d-flex justify-content-between align-items-center">
               <span class="text-secondary small">Est. Full Route Fare:</span>
-              <span class="fs-4 fw-bold text-accent">₹{{ fare_per_seat }}</span>
+              <span class="fs-4 fw-bold text-accent" id="display_fare_per_seat">₹{{ fare_per_seat }}</span>
             </div>
           </div>
           
@@ -118,6 +164,7 @@
             <input type="hidden" name="departure_time" value="{{ departure_time }}">
             <input type="hidden" name="total_seats" value="{{ total_seats }}">
             <input type="hidden" name="price_per_km" value="{{ price_per_km }}">
+            <input type="hidden" name="distance" id="input_post_distance" value="{{ distance }}">
             
             <div class="d-flex gap-2">
               <a href="{% url 'offer_ride' %}" class="btn btn-outline-primary-custom w-50 py-3 rounded-4">Back</a>
@@ -162,32 +209,208 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // Coral start pin
-    const coralIcon = L.divIcon({
-      className: 'custom-div-icon',
-      html: `<div style="background-color: var(--color-accent); width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
-      iconSize: [14, 14],
-      iconAnchor: [7, 7]
+    // Red teardrop pin for pickup
+    const startIcon = L.divIcon({
+      className: '',
+      html: `<div style="position:relative;width:32px;height:42px">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 42" width="32" height="42">
+          <path d="M16 0 C7.163 0 0 7.163 0 16 C0 28 16 42 16 42 C16 42 32 28 32 16 C32 7.163 24.837 0 16 0 Z" fill="#FF5252" stroke="white" stroke-width="2"/>
+          <circle cx="16" cy="16" r="7" fill="white"/>
+        </svg></div>`,
+      iconSize: [32, 42], iconAnchor: [16, 42], popupAnchor: [0, -42]
     });
-    L.marker([startLat, startLng], {icon: coralIcon}).addTo(map).bindPopup("Pickup Address").openPopup();
+    L.marker([startLat, startLng], {icon: startIcon}).addTo(map).bindPopup("<b>🟢 Pickup</b><br>{{ start_name }}").openPopup();
 
-    // Teal end pin
-    const tealIcon = L.divIcon({
-      className: 'custom-div-icon',
-      html: `<div style="background-color: var(--color-primary); width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
-      iconSize: [14, 14],
-      iconAnchor: [7, 7]
+    // Blue teardrop pin for destination
+    const endIcon = L.divIcon({
+      className: '',
+      html: `<div style="position:relative;width:32px;height:42px">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 42" width="32" height="42">
+          <path d="M16 0 C7.163 0 0 7.163 0 16 C0 28 16 42 16 42 C16 42 32 28 32 16 C32 7.163 24.837 0 16 0 Z" fill="#1565C0" stroke="white" stroke-width="2"/>
+          <circle cx="16" cy="16" r="7" fill="white"/>
+        </svg></div>`,
+      iconSize: [32, 42], iconAnchor: [16, 42], popupAnchor: [0, -42]
     });
-    L.marker([endLat, endLng], {icon: tealIcon}).addTo(map).bindPopup("Destination Address");
+    L.marker([endLat, endLng], {icon: endIcon}).addTo(map).bindPopup("<b>🔵 Destination</b><br>{{ end_name }}");
 
-    // Draw route line
-    const route = L.polyline([[startLat, startLng], [endLat, endLng]], {
-      color: 'var(--color-primary)', 
-      weight: 5,
-      dashArray: '8, 12'
-    }).addTo(map);
+    // Draw real road route via OSRM
+    function drawFallback() {
+      const shadow = L.polyline([[startLat, startLng],[endLat, endLng]], {color:'#ffffff', weight:9, opacity:0.85, lineJoin:'round', lineCap:'round'}).addTo(map);
+      const line   = L.polyline([[startLat, startLng],[endLat, endLng]], {color:'#1A73E8', weight:5, opacity:0.75, dashArray:'6,10', lineJoin:'round', lineCap:'round'}).addTo(map);
+      map.fitBounds(line.getBounds(), {padding:[60,60]});
+      
+      const container = document.getElementById('route-suggestions-list');
+      if (container) {
+        container.innerHTML = `
+          <div class="p-3 border rounded-4 bg-light text-center small text-secondary">
+            <i class="fa-solid fa-triangle-exclamation text-warning me-1"></i>
+            Could not fetch dynamic routes. Using fallback straight line.
+          </div>
+        `;
+      }
+    }
+
+    let routes = [];
+    let mapLayers = [];
+    let selectedIndex = 0;
+
+    const mode = "{{ mode }}";
+    const seats = parseInt("{{ seats|default:1 }}") || 1;
+    const vehicleType = "{{ vehicle_type }}";
+    const pricePerKm = parseFloat("{{ price_per_km|default:0.40 }}") || 0.40;
     
-    map.fitBounds(route.getBounds(), {padding: [50, 50]});
+    // Determine rate for passenger
+    let rate = 12.00;
+    if (vehicleType === 'TWO') rate = 5.00;
+    else if (vehicleType === 'THREE') rate = 8.00;
+    else rate = 12.00;
+
+    window.selectRoute = function(index) {
+      selectedIndex = index;
+      const selected = routes[selectedIndex];
+      if (!selected) return;
+      const dist = Math.round(selected.distance / 10) / 100; // meters to km
+      const dur = Math.round(selected.duration / 60); // seconds to mins
+      
+      // Update sidebar KPI indicators
+      document.getElementById('display_distance').innerText = dist.toFixed(2);
+      document.getElementById('display_duration').innerText = dur;
+
+      // Update hidden inputs and display fares
+      if (mode === 'find') {
+        const estFare = dist * rate * seats;
+        const displayFareEl = document.getElementById('display_fare');
+        if (displayFareEl) displayFareEl.innerText = '₹' + estFare.toFixed(2);
+        const inputPriceEl = document.getElementById('input_estimated_price');
+        if (inputPriceEl) inputPriceEl.value = estFare.toFixed(2);
+      } else {
+        const farePerSeat = dist * pricePerKm;
+        const displayFareEl = document.getElementById('display_fare_per_seat');
+        if (displayFareEl) displayFareEl.innerText = '₹' + farePerSeat.toFixed(2);
+        const inputDistEl = document.getElementById('input_post_distance');
+        if (inputDistEl) inputDistEl.value = dist.toFixed(2);
+      }
+
+      // Update map line highlights
+      mapLayers.forEach((layerGroup, i) => {
+        const { mainLine, shadowLine } = layerGroup;
+        if (i === selectedIndex) {
+          mainLine.setStyle({ color: '#1A73E8', weight: 6, opacity: 1 });
+          shadowLine.setStyle({ color: '#ffffff', weight: 10, opacity: 0.9 });
+          mainLine.bringToFront();
+        } else {
+          const altColor = i === 1 ? '#34A853' : '#8A33E8'; // Route 1 green, Route 2 purple
+          mainLine.setStyle({ color: altColor, weight: 4, opacity: 0.5 });
+          shadowLine.setStyle({ color: '#ffffff', weight: 6, opacity: 0.4 });
+        }
+      });
+
+      // Update selector list visual states
+      const cards = document.querySelectorAll('.route-option-card');
+      cards.forEach((card, i) => {
+        if (i === selectedIndex) {
+          card.classList.add('border-primary', 'bg-light-subtle');
+          card.classList.remove('border-light-subtle', 'bg-white');
+        } else {
+          card.classList.remove('border-primary', 'bg-light-subtle');
+          card.classList.add('border-light-subtle', 'bg-white');
+        }
+      });
+    }
+
+    function renderRouteList() {
+      const container = document.getElementById('route-suggestions-list');
+      if (!container) return;
+      
+      container.innerHTML = '';
+      routes.forEach((r, i) => {
+        const dist = Math.round(r.distance / 10) / 100;
+        const dur = Math.round(r.duration / 60);
+        
+        let label = 'Alt Route';
+        let badgeBg = 'bg-secondary';
+        let routeName = `Route ${i + 1}`;
+        
+        if (i === 0) {
+          label = 'Recommended';
+          badgeBg = 'bg-primary-custom text-white';
+          routeName = 'Fastest Route';
+        } else if (i === 1) {
+          label = 'Alternative 1';
+          badgeBg = 'bg-success text-white';
+        } else {
+          label = 'Alternative 2';
+          badgeBg = 'bg-warning text-dark';
+        }
+
+        const activeClass = i === selectedIndex ? 'border-primary bg-light-subtle' : 'border-light-subtle bg-white';
+
+        const card = document.createElement('div');
+        card.className = `p-3 border rounded-4 cursor-pointer transition-all d-flex align-items-center justify-content-between route-option-card ${activeClass}`;
+        card.style.borderWidth = '2px';
+        card.style.cursor = 'pointer';
+        card.onclick = () => selectRoute(i);
+
+        card.innerHTML = `
+          <div>
+            <span class="fw-bold text-dark">${routeName}</span>
+            <div class="small text-secondary">${dist.toFixed(2)} km &bull; ${dur} mins</div>
+          </div>
+          <span class="badge ${badgeBg} rounded-pill px-2.5 py-1.5 small">${label}</span>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    fetch(`https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson&alternatives=true`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.code !== 'Ok' || !data.routes.length) { drawFallback(); return; }
+        
+        routes = data.routes;
+        
+        // Draw alternate routes backwards so primary is always on top initially
+        for (let i = routes.length - 1; i >= 0; i--) {
+          const r = routes[i];
+          const coords = r.geometry.coordinates.map(c => [c[1], c[0]]);
+          
+          const altColor = i === 1 ? '#34A853' : (i === 2 ? '#8A33E8' : '#1A73E8');
+          const isPrimary = i === 0;
+          
+          const shadowLine = L.polyline(coords, {
+            color: '#ffffff',
+            weight: isPrimary ? 10 : 6,
+            opacity: isPrimary ? 0.9 : 0.4,
+            lineJoin: 'round',
+            lineCap: 'round'
+          }).addTo(map);
+          
+          const mainLine = L.polyline(coords, {
+            color: altColor,
+            weight: isPrimary ? 6 : 4,
+            opacity: isPrimary ? 1 : 0.5,
+            lineJoin: 'round',
+            lineCap: 'round'
+          }).addTo(map);
+          
+          // Make interactive
+          mainLine.on('click', () => {
+            selectRoute(i);
+          });
+          
+          // Keep references in order of routes
+          mapLayers[i] = { mainLine, shadowLine };
+        }
+        
+        // Center on primary route
+        const primaryCoords = routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+        const fitBoundsLine = L.polyline(primaryCoords);
+        map.fitBounds(fitBoundsLine.getBounds(), {padding:[60,60]});
+        
+        renderRouteList();
+        selectRoute(0);
+      })
+      .catch(() => drawFallback());
   });
 </script>
 {% endblock %}
